@@ -7,11 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, X, Save, LogOut } from 'lucide-react';
+import { Plus, X, Save, LogOut, Sparkles } from 'lucide-react';
+
+const PRESET_KEYWORDS = [
+  "LLM", "Agent", "RAG", "Prompt Engineering", "Quantum Computing", 
+  "Solid-State Battery", "Renewable Energy", "Autonomous Driving", 
+  "Computer Vision", "Neuroscience", "Virology", "Fintech", "V2G", 
+  "Edge Computing", "HCI", "Transformers", "NLP", "Robotics", 
+  "Bioinformatics", "Microplastics"
+];
 
 interface Topic {
   name: string;
   keywords: string[];
+  match_type: string;
   filters: {
     years_limit: number;
     min_journal_rank: string;
@@ -31,6 +40,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [aiPrompts, setAiPrompts] = useState<{ [key: number]: string }>({});
+  const [recommending, setRecommending] = useState<{ [key: number]: boolean }>({});
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -65,6 +77,7 @@ export default function DashboardPage() {
             {
               name: "Default Topic",
               keywords: [],
+              match_type: "AND",
               filters: { years_limit: 3, min_journal_rank: "Q2", min_citations: 5 }
             }
           ],
@@ -95,6 +108,40 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
+  };
+
+  const handleRecommendKeywords = async (topicIndex: number) => {
+    if (!config) return;
+    const prompt = aiPrompts[topicIndex];
+    if (!prompt) return;
+    setRecommending(prev => ({ ...prev, [topicIndex]: true }));
+    try {
+      const res = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topicDescription: prompt })
+      });
+      const data = await res.json();
+      if (data.keywords && Array.isArray(data.keywords)) {
+        const newConfig = { ...config };
+        const existing = newConfig.topics[topicIndex].keywords || [];
+        const newKeys = data.keywords.filter((k: string) => !existing.includes(k));
+        newConfig.topics[topicIndex].keywords = [...existing, ...newKeys];
+        setConfig(newConfig);
+      } else {
+        alert(data.error || 'Failed to fetch recommendations');
+      }
+    } catch (e: any) {
+      alert('Error fetching recommendations');
+    }
+    setRecommending(prev => ({ ...prev, [topicIndex]: false }));
+  };
+
+  const updateTopicStringField = (topicIndex: number, field: keyof Topic, value: string) => {
+    if (!config) return;
+    const newConfig = { ...config };
+    (newConfig.topics[topicIndex] as any)[field] = value;
+    setConfig(newConfig);
   };
 
   const addKeyword = (topicIndex: number, keyword: string) => {
@@ -184,7 +231,21 @@ export default function DashboardPage() {
             <CardContent className="space-y-6">
               {/* Keywords Section */}
               <div className="space-y-4">
-                <Label>Keywords</Label>
+                <div className="flex justify-between items-center">
+                  <Label className="text-lg">Keywords</Label>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground mr-2">Search Mode:</Label>
+                    <select 
+                      className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      value={topic.match_type || 'AND'}
+                      onChange={(e) => updateTopicStringField(tIdx, 'match_type', e.target.value)}
+                    >
+                      <option value="AND">All (AND) - Strict</option>
+                      <option value="OR">Any (OR) - Broad</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2 mb-4">
                   {topic.keywords.map((kw, kIdx) => (
                     <span key={kIdx} className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm">
@@ -195,10 +256,12 @@ export default function DashboardPage() {
                     </span>
                   ))}
                 </div>
+
+                {/* Hybrid UI: Manual Input */}
                 <div className="flex gap-2">
                   <Input 
                     id={`kw-input-${tIdx}`}
-                    placeholder="Add keyword..." 
+                    placeholder="Type keyword and press Enter..." 
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         addKeyword(tIdx, (e.target as HTMLInputElement).value);
@@ -215,6 +278,39 @@ export default function DashboardPage() {
                   }}>
                     <Plus className="w-4 h-4" />
                   </Button>
+                </div>
+
+                {/* Hybrid UI: AI Generator */}
+                <div className="flex gap-2 items-center bg-muted/50 p-3 rounded-md border border-dashed">
+                  <Input 
+                    placeholder="Describe topic for AI to suggest keywords... (e.g. LLM in Healthcare)" 
+                    value={aiPrompts[tIdx] || ''}
+                    onChange={(e) => setAiPrompts(prev => ({ ...prev, [tIdx]: e.target.value }))}
+                  />
+                  <Button variant="secondary" onClick={() => handleRecommendKeywords(tIdx)} disabled={recommending[tIdx] || !aiPrompts[tIdx]}>
+                    <Sparkles className="w-4 h-4 mr-2 text-primary" />
+                    {recommending[tIdx] ? 'Thinking...' : 'AI Recommend'}
+                  </Button>
+                </div>
+
+                {/* Preset Badges UI */}
+                <div className="mt-4">
+                  <Label className="text-xs text-muted-foreground block mb-2">Preset Keywords (Click to add):</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESET_KEYWORDS.map((preset, pIdx) => {
+                      const isActive = topic.keywords.includes(preset);
+                      return (
+                        <button 
+                          key={pIdx}
+                          disabled={isActive}
+                          onClick={() => addKeyword(tIdx, preset)}
+                          className={`text-xs px-2 py-1 border rounded-md transition-colors ${isActive ? 'bg-primary/20 border-primary/30 text-primary opacity-50 cursor-not-allowed' : 'bg-background hover:bg-muted text-muted-foreground'}`}
+                        >
+                          {preset}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 

@@ -36,8 +36,13 @@ class Fetcher:
         return all_papers
 
     def _fetch_s2(self, topic: Topic) -> List[Paper]:
-        """Fetches papers from Semantic Scholar API."""
-        query = " ".join(topic.keywords)
+        """Fetches papers from Semantic Scholar API using AND/OR logic."""
+        # Semantic Scholar uses space for AND, and '|' for OR
+        if getattr(topic, "match_type", "AND").upper() == "OR":
+            query = " | ".join([f'"{k}"' for k in topic.keywords])
+        else:
+            query = " ".join([f'"{k}"' for k in topic.keywords])
+            
         params = {
             "query": query,
             "limit": 50,  # Max for searching
@@ -80,8 +85,10 @@ class Fetcher:
             return []
 
     def _fetch_arxiv(self, topic: Topic) -> List[Paper]:
-        """Fetches papers from arXiv API."""
-        query = " AND ".join([f'all:"{k}"' for k in topic.keywords])
+        """Fetches papers from arXiv API using AND/OR logic."""
+        match_op = " OR " if getattr(topic, "match_type", "AND").upper() == "OR" else " AND "
+        query = match_op.join([f'all:"{k}"' for k in topic.keywords])
+        
         url = f"http://export.arxiv.org/api/query?search_query={query}&start=0&max_results=20"
         
         try:

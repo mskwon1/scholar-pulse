@@ -20,7 +20,18 @@ function LoginForm() {
   useEffect(() => {
     const msg = searchParams.get('message');
     if (msg) setMessage(msg);
-  }, [searchParams]);
+
+    // Listen for implicit grant (from email verification link)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+         router.push('/dashboard');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [searchParams, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

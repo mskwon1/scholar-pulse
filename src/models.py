@@ -10,6 +10,7 @@ class FilterConfig(BaseModel):
 class Topic(BaseModel):
     name: str
     keywords: List[str]
+    match_type: str = "AND"
     filters: FilterConfig
 
 class UserConfig(BaseModel):
