@@ -85,43 +85,68 @@ class Fetcher:
             return []
 
     def _fetch_arxiv(self, topic: Topic) -> List[Paper]:
-        """Fetches papers from arXiv API using AND/OR logic."""
+        """Fetches papers from arXiv API using AND/OR logic with rate limit handling."""
         match_op = " OR " if getattr(topic, "match_type", "AND").upper() == "OR" else " AND "
         query = match_op.join([f'all:"{k}"' for k in topic.keywords])
         
         url = f"http://export.arxiv.org/api/query?search_query={query}&start=0&max_results=20"
+        headers = {"User-Agent": "ScholarPulse/1.0 (mailto:admin@scholarpulse.local)"}
         
-        try:
-            logger.info(f"Searching arXiv for: {query}")
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            
-            # Simple XML parsing for arXiv
-            root = ET.fromstring(response.content)
-            
-            papers = []
-            namespace = {'atom': 'http://www.w3.org/2005/Atom'}
-            
-            for entry in root.findall('atom:entry', namespace):
-                title = entry.find('atom:title', namespace).text.strip().replace('\n', ' ')
-                abstract = entry.find('atom:summary', namespace).text.strip()
-                authors = [author.find('atom:name', namespace).text for author in entry.findall('atom:author', namespace)]
-                published = entry.find('atom:published', namespace).text
-                link = entry.find('atom:id', namespace).text
+        max_retries = 3
+        delay = 3
+        
+        for attempt in range(max_retries):
+            try:
+                if attempt == 0:
+                    logger.info(f"Searching arXiv for: {query}")
+                else:
+                    logger.info(f"Searching arXiv for: {query} (Retry {attempt}/{max_retries - 1})")
+                    
+                response = requests.get(url, headers=headers, timeout=10)
                 
-                paper = Paper(
-                    id=link.split('/')[-1],
-                    title=title,
-                    abstract=abstract,
-                    authors=authors,
-                    journal="arXiv",
-                    publication_date=published,
-                    url=link,
-                    citation_count=0  # arXiv entries don't have citation counts directly
-                )
-                papers.append(paper)
-            return papers
-            
-        except Exception as e:
-            logger.error(f"Error fetching from arXiv: {e}")
-            return []
+                if response.status_code == 429:
+                    logger.warning(f"arXiv rate limit hit (429). Sleeping for {delay} seconds...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+                    continue
+                    
+                response.raise_for_status()
+                
+                # Simple XML parsing for arXiv
+                root = ET.fromstring(response.content)
+                
+                papers = []
+                # Namespace definition for arXiv ATOM format
+                namespace = {'atom': 'http://www.w3.org/2005/Atom'}
+                
+                for entry in root.findall('atom:entry', namespace):
+                    title = entry.find('atom:title', namespace).text.strip().replace('\n', ' ')
+                    abstract = entry.find('atom:summary', namespace).text.strip()
+                    authors = [author.find('atom:name', namespace).text for author in entry.findall('atom:author', namespace)]
+                    published = entry.find('atom:published', namespace).text
+                    link = entry.find('atom:id', namespace).text
+                    
+                    paper = Paper(
+                        id=link.split('/')[-1],
+                        title=title,
+                        abstract=abstract,
+                        authors=authors,
+                        journal="arXiv",
+                        publication_date=published,
+                        url=link,
+                        citation_count=0  # arXiv entries don't have citation counts directly
+                    )
+                    papers.append(paper)
+                return papers
+                
+            except Exception as e:
+                logger.error(f"Error fetching from arXiv: {e}")
+                if attempt < max_retries - 1:
+                    logger.warning(f"Sleeping for {delay} seconds before retry...")
+                    time.sleep(delay)
+                    delay *= 2
+                else:
+                    return []
+                    
+        logger.error("Failed to fetch from arXiv after multiple attempts due to rate limit.")
+        return []
