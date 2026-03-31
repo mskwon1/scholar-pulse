@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -195,7 +196,11 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background text-foreground p-8 dark">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Scholar Pulse Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <Image src="/logo.png" alt="Scholar Pulse Logo" width={36} height={36} className="rounded-md shadow-sm" />
+            <h1 className="text-3xl font-extrabold tracking-tight text-primary">Scholar Pulse</h1>
+            <span className="text-2xl font-medium text-muted-foreground tracking-tight hidden sm:inline-block">Dashboard</span>
+          </div>
           <div className="flex gap-4">
             <Button onClick={handleSave} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
