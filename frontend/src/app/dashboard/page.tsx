@@ -195,20 +195,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8 dark">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8 dark">
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4">
           <div className="flex items-center gap-3">
-            <Image src="/logo.png" alt="Scholar Pulse Logo" width={36} height={36} className="rounded-md shadow-sm" />
-            <h1 className="text-3xl font-extrabold tracking-tight text-primary">Scholar Pulse</h1>
-            <span className="text-2xl font-medium text-muted-foreground tracking-tight hidden sm:inline-block">Dashboard</span>
+            <Image src="/logo.png" alt="Scholar Pulse Logo" width={32} height={32} className="w-[32px] h-[32px] md:w-[36px] md:h-[36px] rounded-md shadow-sm shrink-0" />
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-primary truncate">Scholar Pulse</h1>
+            <span className="text-xl md:text-2xl font-medium text-muted-foreground tracking-tight hidden sm:inline-block">Dashboard</span>
           </div>
-          <div className="flex gap-4">
-            <Button onClick={handleSave} disabled={saving}>
+          <div className="flex gap-2 w-full md:w-auto">
+            <Button onClick={handleSave} disabled={saving} className="flex-1 md:flex-none">
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving...' : 'Save'}
             </Button>
-            <Button variant="outline" onClick={handleLogout}>
+            <Button variant="outline" onClick={handleLogout} className="flex-1 md:flex-none">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
             </Button>
@@ -222,7 +222,7 @@ export default function DashboardPage() {
               <CardDescription>Manage your daily research insights delivery.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="space-y-1">
                   <Label className="text-base font-medium">Receive Daily Reports</Label>
                   <p className="text-sm text-muted-foreground">
@@ -254,12 +254,12 @@ export default function DashboardPage() {
             <CardContent className="space-y-6">
               {/* Keywords Section */}
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
                   <Label className="text-lg">Keywords</Label>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm text-muted-foreground mr-2">Search Mode:</Label>
+                  <div className="flex items-center justify-between w-full md:w-auto gap-2">
+                    <Label className="text-sm text-muted-foreground shrink-0">Search Mode:</Label>
                     <Select value={topic.match_type || 'AND'} onValueChange={(val) => updateTopicStringField(tIdx, 'match_type', val || '')}>
-                      <SelectTrigger className="w-[200px] h-9">
+                      <SelectTrigger className="w-[160px] md:w-[200px] h-9">
                         <SelectValue placeholder="Select mode" />
                       </SelectTrigger>
                       <SelectContent>
@@ -305,13 +305,14 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Hybrid UI: AI Generator */}
-                <div className="flex gap-2 items-center bg-muted/50 p-3 rounded-md border border-dashed">
+                <div className="flex flex-col md:flex-row gap-2 md:items-center bg-muted/50 p-3 rounded-md border border-dashed">
                   <Input 
                     placeholder="Describe topic for AI to suggest keywords... (e.g. LLM in Healthcare)" 
                     value={aiPrompts[tIdx] || ''}
                     onChange={(e) => setAiPrompts(prev => ({ ...prev, [tIdx]: e.target.value }))}
+                    className="w-full grow"
                   />
-                  <Button variant="secondary" onClick={() => handleRecommendKeywords(tIdx)} disabled={recommending[tIdx] || !aiPrompts[tIdx]}>
+                  <Button variant="secondary" onClick={() => handleRecommendKeywords(tIdx)} disabled={recommending[tIdx] || !aiPrompts[tIdx]} className="w-full md:w-auto shrink-0">
                     <Sparkles className="w-4 h-4 mr-2 text-primary" />
                     {recommending[tIdx] ? 'Thinking...' : 'AI Recommend'}
                   </Button>
