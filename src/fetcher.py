@@ -67,7 +67,7 @@ class Fetcher:
                 response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=10)
                 
                 if response.status_code == 429:
-                    logger.warning("Semantic Scholar rate limit hit (429). Skipping remaining keywords for this topic.")
+                    logger.warning(f"Semantic Scholar rate limit hit (429). Skipping remaining keywords. URL: {response.url}")
                     break
                     
                 response.raise_for_status()
@@ -97,7 +97,8 @@ class Fetcher:
                     papers_dict[pid] = paper
                     
             except Exception as e:
-                logger.error(f"Error fetching Semantic Scholar for '{q}': {e}")
+                error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{S2_SEARCH_URL} with {params}"
+                logger.error(f"Error fetching Semantic Scholar for '{q}': {e} | URL: {error_url}")
                 
         return list(papers_dict.values())
 
@@ -127,7 +128,7 @@ class Fetcher:
                 response = requests.get(url, params=params, headers=headers, timeout=30)
                 
                 if response.status_code == 429:
-                    logger.warning(f"arXiv rate limit hit (429). Sleeping for {delay} seconds...")
+                    logger.warning(f"arXiv rate limit hit (429). Sleeping for {delay} seconds... URL: {response.url}")
                     time.sleep(delay)
                     delay *= 2  # Exponential backoff
                     continue
@@ -162,7 +163,8 @@ class Fetcher:
                 return papers
                 
             except Exception as e:
-                logger.error(f"Error fetching from arXiv: {e}")
+                error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{url} with {params}"
+                logger.error(f"Error fetching from arXiv: {e} | URL: {error_url}")
                 if attempt < max_retries - 1:
                     logger.warning(f"Sleeping for {delay} seconds before retry...")
                     time.sleep(delay)
