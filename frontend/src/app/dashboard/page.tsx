@@ -181,7 +181,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.keywords && Array.isArray(data.keywords)) {
-        const newConfig = { ...config };
+        const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
         const existing = newConfig.topics[topicIndex].keywords || [];
         const newKeys = data.keywords.filter(
           (k: string) => !existing.includes(k),
@@ -203,7 +203,7 @@ export default function DashboardPage() {
     value: string,
   ) => {
     if (!config) return;
-    const newConfig = { ...config };
+    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
     (newConfig.topics[topicIndex] as any)[field] = value;
     setConfig(newConfig);
   };
@@ -211,7 +211,7 @@ export default function DashboardPage() {
   const addKeyword = (topicIndex: number, keyword: string) => {
     if (!config || !keyword || !keyword.trim()) return;
     const trimmed = keyword.trim();
-    const newConfig = { ...config };
+    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
     if (!newConfig.topics[topicIndex].keywords.includes(trimmed)) {
       newConfig.topics[topicIndex].keywords = [
         ...newConfig.topics[topicIndex].keywords,
@@ -223,7 +223,7 @@ export default function DashboardPage() {
 
   const removeKeyword = (topicIndex: number, keywordIndex: number) => {
     if (!config) return;
-    const newConfig = { ...config };
+    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
     const newKeywords = [...newConfig.topics[topicIndex].keywords];
     newKeywords.splice(keywordIndex, 1);
     newConfig.topics[topicIndex].keywords = newKeywords;
@@ -232,7 +232,7 @@ export default function DashboardPage() {
 
   const updateFilter = (topicIndex: number, field: string, value: any) => {
     if (!config) return;
-    const newConfig = { ...config };
+    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
     // Handle numeric values
     let finalValue = value;
     if (field === "years_limit" || field === "min_citations") {
