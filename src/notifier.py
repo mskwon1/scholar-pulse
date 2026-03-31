@@ -9,6 +9,7 @@ logger = get_logger(__name__)
 class Notifier:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("RESEND_API_KEY")
+        self.from_email = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
         if self.api_key:
             resend.api_key = self.api_key
 
@@ -27,7 +28,7 @@ class Notifier:
         try:
             logger.info(f"Sending email report to {to_email}...")
             params = {
-                "from": "Scholar Pulse <onboarding@resend.dev>",  # Replace with verified domain if possible
+                "from": f"Scholar Pulse <{self.from_email}>",
                 "to": [to_email],
                 "subject": f"Scholar Pulse: {len(papers)} New Papers for Today",
                 "html": html_content,
