@@ -51,7 +51,17 @@ class Filter:
             rank = self._get_journal_rank(paper.journal)
             paper.sjr_rank = rank
             
-            if config.min_journal_rank:
+            # 예외 처리: 2025년 이후 최신 논문이거나 arXiv 프피프린트인 경우 저널 랭크 검사 패스 (최신성 및 메타데이터 누락 방어)
+            pub_year = 0
+            if paper.publication_date:
+                try:
+                    pub_year = int(str(paper.publication_date)[:4])
+                except Exception:
+                    pass
+                    
+            is_recent_or_preprint = (pub_year >= 2025) or (paper.journal and "arxiv" in paper.journal.lower())
+            
+            if config.min_journal_rank and not is_recent_or_preprint:
                 if not self._is_rank_sufficient(rank, config.min_journal_rank):
                     continue
             
