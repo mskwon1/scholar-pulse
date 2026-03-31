@@ -102,7 +102,7 @@ class Fetcher:
                 else:
                     logger.info(f"Searching arXiv for: {query} (Retry {attempt}/{max_retries - 1})")
                     
-                response = requests.get(url, headers=headers, timeout=10)
+                response = requests.get(url, headers=headers, timeout=30)
                 
                 if response.status_code == 429:
                     logger.warning(f"arXiv rate limit hit (429). Sleeping for {delay} seconds...")
