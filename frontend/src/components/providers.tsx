@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as JotaiProvider } from 'jotai';
 import { type ReactNode, useState } from 'react';
+import { AuthListener } from './auth-listener';
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -20,7 +21,10 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <JotaiProvider>{children}</JotaiProvider>
+      <JotaiProvider>
+        <AuthListener />
+        {children}
+      </JotaiProvider>
     </QueryClientProvider>
   );
 }
