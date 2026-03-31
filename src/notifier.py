@@ -41,36 +41,41 @@ class Notifier:
         except Exception as e:
             logger.error(f"Error sending email report: {e}")
 
-    def _generate_html(self, papers: List[Paper]) -> str:
-        """Generates the HTML content for the report email."""
+    def _format_list_to_html(self, field_value, default_text="N/A"):
+        """Safely parses a field (list, string rep of list, or string) into HTML bullet points."""
         import ast
         import re
 
+        if not field_value:
+            return f"<p style='color: #64748b; font-style: italic;'>{default_text}</p>"
+
+        if isinstance(field_value, list):
+            li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in field_value])
+            return f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
+        
+        try:
+            parsed_list = ast.literal_eval(field_value)
+            if isinstance(parsed_list, list):
+                li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in parsed_list])
+                return f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
+            else:
+                return f"<p style='color: #334155;'>{field_value}</p>"
+        except Exception:
+            clean_text = re.sub(r"^\[|\]$", "", str(field_value))
+            parts = [part.strip().strip("'\"") for part in clean_text.split("', '") if part.strip()]
+            if len(parts) > 1:
+                li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in parts])
+                return f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
+            else:
+                return f"<p style='color: #334155;'>{field_value}</p>"
+
+    def _generate_html(self, papers: List[Paper]) -> str:
+        """Generates the HTML content for the report email."""
         items_html = []
         for p in papers:
-            # Parse summary list if it's already a list or a string representation
-            summary_html = "<p style='color: #64748b; font-style: italic;'>Analysis pending...</p>"
-            if p.summary:
-                if isinstance(p.summary, list):
-                    li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in p.summary])
-                    summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
-                else:
-                    try:
-                        summary_list = ast.literal_eval(p.summary)
-                        if isinstance(summary_list, list):
-                            li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in summary_list])
-                            summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
-                        else:
-                            summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
-                    except Exception:
-                        # Fallback to simple split logic if literal_eval fails
-                        clean_text = re.sub(r"^\[|\]$", "", str(p.summary))
-                        parts = [part.strip().strip("'\"") for part in clean_text.split("', '") if part.strip()]
-                        if len(parts) > 1:
-                            li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in parts])
-                            summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
-                        else:
-                            summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
+            summary_html = self._format_list_to_html(p.summary, "Analysis pending...")
+            novelty_html = self._format_list_to_html(p.novelty)
+            impact_html = self._format_list_to_html(p.impact)
 
             # Format authors: limit to 10
             authors_list = p.authors or []
@@ -91,12 +96,15 @@ class Notifier:
                 </div>
                 <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 16px 0;">
                 
-                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #0f172a;">✨ 3-Line Summary:</h4>
+                <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #0f172a;">✨ 3-Line Summary</h4>
                 {summary_html}
                 
                 <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin-top: 16px;">
-                    <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #0f172a;">🚀 Novelty & Impact:</h4>
-                    <p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.5;">{p.novelty or 'N/A'}</p>
+                    <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #0f172a;">💡 Novelty</h4>
+                    {novelty_html}
+                    
+                    <h4 style="margin: 16px 0 8px 0; font-size: 14px; color: #0f172a;">🚀 Impact</h4>
+                    {impact_html}
                 </div>
                 
                 <div style="margin-top: 16px; font-size: 12px;">
