@@ -16,6 +16,7 @@ class UserConfig(BaseModel):
     topics: List[Topic]
     schedule: str = "daily"
     delivery: str = "email"
+    delivery_email: Optional[str] = None
 
 class Paper(BaseModel):
     id: str  # Semantic Scholar ID or arXiv ID

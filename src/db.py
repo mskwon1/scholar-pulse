@@ -1,8 +1,8 @@
 import os
 from datetime import datetime, timezone
-from typing import List, Set
+from typing import List, Set, Tuple, Optional
 from supabase import create_client, Client
-from .models import Paper
+from .models import Paper, UserConfig
 from .utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -17,6 +17,32 @@ class Database:
             self.client = None
         else:
             self.client = create_client(url, key)
+
+    def get_all_user_configs(self) -> List[Tuple[str, UserConfig]]:
+        """Returns a list of (user_id, UserConfig) tuples from Supabase."""
+        if not self.client: return []
+        try:
+            response = self.client.table("user_config").select("*").execute()
+            configs = []
+            for row in response.data:
+                try:
+                    configs.append((row["user_id"], UserConfig(**row["config"])))
+                except Exception as parse_e:
+                    logger.error(f"Error parsing config for user {row.get('user_id')}: {parse_e}")
+            return configs
+        except Exception as e:
+            logger.error(f"Error fetching configs: {e}")
+            return []
+
+    def get_user_email(self, user_id: str) -> Optional[str]:
+        """Fetches the user's login email using Supabase Admin API."""
+        if not self.client: return None
+        try:
+            user_response = self.client.auth.admin.get_user_by_id(user_id)
+            return user_response.user.email
+        except Exception as e:
+            logger.error(f"Error fetching email for user {user_id}: {e}")
+            return None
 
     def filter_sent_papers(self, papers: List[Paper]) -> List[Paper]:
         """Returns only the papers that haven't been sent yet."""

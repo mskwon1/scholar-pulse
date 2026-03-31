@@ -23,6 +23,7 @@ interface UserConfig {
   topics: Topic[];
   schedule: string;
   delivery: string;
+  delivery_email?: string;
 }
 
 export default function DashboardPage() {
@@ -148,6 +149,29 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        {config && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Global Settings</CardTitle>
+              <CardDescription>Manage your delivery preferences.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label>Delivery Email (Optional)</Label>
+                <Input 
+                  type="email" 
+                  placeholder="Leave blank to use login email"
+                  value={config.delivery_email || ''}
+                  onChange={(e) => setConfig({ ...config, delivery_email: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Reports will be sent to this email. If empty, your primary account email is used automatically.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {config?.topics.map((topic, tIdx) => (
           <Card key={tIdx}>
