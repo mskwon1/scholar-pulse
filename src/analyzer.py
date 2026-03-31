@@ -57,9 +57,9 @@ class Analyzer:
             ]
             
             try:
-                # Switched to the more generous text output model: gemini-2.5-flash-lite
+                # Switched to the more generous text output model: gemini-3.1-flash-lite-preview
                 response = self.client.models.generate_content(
-                    model='gemini-3.1-flash-lite',
+                    model='gemini-3.1-flash-lite-preview',
                     contents=[json.dumps(input_payload)],
                     config={
                         'system_instruction': SYSTEM_PROMPT,
