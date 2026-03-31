@@ -32,7 +32,7 @@ interface UserConfig {
   topics: Topic[];
   schedule: string;
   delivery: string;
-  delivery_email?: string;
+  receive_email?: boolean;
 }
 
 export default function DashboardPage() {
@@ -69,7 +69,7 @@ export default function DashboardPage() {
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching config:', error);
       } else if (data) {
-        setConfig(data.config || { topics: [], schedule: 'daily', delivery: 'email' });
+        setConfig(data.config || { topics: [], schedule: 'daily', delivery: 'email', receive_email: true });
       } else {
         // Default config if none exists
         setConfig({
@@ -82,7 +82,8 @@ export default function DashboardPage() {
             }
           ],
           schedule: "daily",
-          delivery: "email"
+          delivery: "email",
+          receive_email: true
         });
       }
     } finally {
@@ -200,21 +201,28 @@ export default function DashboardPage() {
         {config && (
           <Card>
             <CardHeader>
-              <CardTitle>Global Settings</CardTitle>
-              <CardDescription>Manage your delivery preferences.</CardDescription>
+              <CardTitle>Email Notifications</CardTitle>
+              <CardDescription>Manage your daily research insights delivery.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label>Delivery Email (Optional)</Label>
-                <Input 
-                  type="email" 
-                  placeholder="Leave blank to use login email"
-                  value={config.delivery_email || ''}
-                  onChange={(e) => setConfig({ ...config, delivery_email: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Reports will be sent to this email. If empty, your primary account email is used automatically.
-                </p>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <Label className="text-base font-medium">Receive Daily Reports</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get an AI-curated summary of the latest papers matching your topics.
+                    <br/>
+                    <span className="font-bold text-primary">Emails are sent daily at 9:00 AM (KST).</span>
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 mt-1">
+                  <input
+                    type="checkbox"
+                    checked={config.receive_email !== false}
+                    onChange={(e) => setConfig({ ...config, receive_email: e.target.checked })}
+                    className="w-5 h-5 accent-primary cursor-pointer"
+                  />
+                  <span className="text-sm font-medium">{config.receive_email !== false ? 'On' : 'Off'}</span>
+                </div>
               </div>
             </CardContent>
           </Card>

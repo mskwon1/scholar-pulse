@@ -30,11 +30,13 @@ def run_agent():
     for user_id, config in user_configs:
         logger.info(f"--- Processing config for user: {user_id} ---")
         
-        # Determine the delivery email: priority to config override, fallback to auth.users email
-        delivery_email = config.delivery_email
-        if not delivery_email:
-            delivery_email = db.get_user_email(user_id)
-            
+        # Check if user opted out of emails
+        if not getattr(config, 'receive_email', True):
+            logger.info(f"User {user_id} has email notifications disabled. Skipping.")
+            continue
+
+        # Fetch auth.users email directly
+        delivery_email = db.get_user_email(user_id)
         if not delivery_email:
             logger.error(f"Could not determine delivery email for user {user_id}. Skipping.")
             continue
