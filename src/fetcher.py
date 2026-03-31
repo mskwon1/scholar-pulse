@@ -50,49 +50,67 @@ class Fetcher:
         params = {
             "query": query,
             "fields": S2_FIELDS,
-            "year": year_filter
+            "year": year_filter,
+            "sort": "citationCount:desc"
         }
         
         papers_dict = {}
+        MAX_PAGES = 3  # Maximum 3 pages (up to 3000 papers) to prevent memory/timeout issues
+        page_count = 0
         
-        try:
-            logger.info(f"Searching Semantic Scholar (Bulk) for: {query}")
-            
-            response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=30)
-            
-            if response.status_code == 429:
-                logger.warning(f"Semantic Scholar rate limit hit (429). URL: {response.url}")
-                return []
+        logger.info(f"Searching Semantic Scholar (Bulk) for: {query}")
+        
+        while page_count < MAX_PAGES:
+            try:
+                response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=30)
                 
-            response.raise_for_status()
-            
-            data = response.json()
-            for item in data.get("data", []):
-                pid = item.get("paperId", "")
-                if not pid or pid in papers_dict:
-                    continue
+                if response.status_code == 429:
+                    logger.warning(f"Semantic Scholar rate limit hit (429). URL: {response.url}")
+                    break
                     
-                journal_info = item.get("journal", {})
-                journal_name = journal_info.get("name") if journal_info else None
-                doi = item.get("externalIds", {}).get("DOI")
-                authors = [a.get("name") for a in item.get("authors", [])]
+                response.raise_for_status()
+                data = response.json()
                 
-                paper = Paper(
-                    id=pid,
-                    title=item.get("title", ""),
-                    abstract=item.get("abstract"),
-                    authors=authors,
-                    journal=journal_name,
-                    publication_date=item.get("publicationDate"),
-                    doi=doi,
-                    url=item.get("url"),
-                    citationCount=item.get("citationCount", 0)
-                )
-                papers_dict[pid] = paper
+                items = data.get("data", [])
+                if not items:
+                    break
+                    
+                for item in items:
+                    pid = item.get("paperId", "")
+                    if not pid or pid in papers_dict:
+                        continue
+                        
+                    journal_info = item.get("journal", {})
+                    journal_name = journal_info.get("name") if journal_info else None
+                    doi = item.get("externalIds", {}).get("DOI")
+                    authors = [a.get("name") for a in item.get("authors", [])]
+                    
+                    paper = Paper(
+                        id=pid,
+                        title=item.get("title", ""),
+                        abstract=item.get("abstract"),
+                        authors=authors,
+                        journal=journal_name,
+                        publication_date=item.get("publicationDate"),
+                        doi=doi,
+                        url=item.get("url"),
+                        citation_count=item.get("citationCount", 0)
+                    )
+                    papers_dict[pid] = paper
                 
-        except Exception as e:
-            error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{S2_SEARCH_URL} with {params}"
-            logger.error(f"Error fetching Semantic Scholar for '{query}': {e} | URL: {error_url}")
+                token = data.get("token")
+                if not token:
+                    break  # No more pages
+                    
+                # Update params for the next page
+                params["token"] = token
+                page_count += 1
+                time.sleep(1)  # Soft sleep between pagination calls to respect rate limit API
+                
+            except Exception as e:
+                error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{S2_SEARCH_URL} with {params}"
+                logger.error(f"Error fetching Semantic Scholar for '{query}': {e} | URL: {error_url}")
+                break
             
         return list(papers_dict.values())
 
