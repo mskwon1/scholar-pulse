@@ -1,0 +1,1 @@
+Implement Tasks 2 through 6 from task.md based on docs/plan.md for the scholar-pulse backend. Include S2 API fetcher, SJR filtering, Gemini summarization, Supabase DB state management, and Resend email delivery. Please write modular python code under src/. When done, create result-backend.md.

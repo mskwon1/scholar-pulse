@@ -1,0 +1,1 @@
+Execute Phase 3 Verification. Step 6: Alignment Review. Step 7: Security/Bug Review. Step 8: Improvement/Regression Review. Review the code in src/ against docs/source/prd.md and docs/plan.md. When finished, create result-qa-agent.md.
