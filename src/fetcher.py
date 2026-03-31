@@ -9,8 +9,8 @@ from .utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-S2_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
-S2_FIELDS = "paperId,title,abstract,authors,journal,publicationDate,externalIds,url,citationCount"
+S2_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
+S2_FIELDS = "paperId,title,abstract,authors,journal,publicationDate,externalIds,url,citationCount,year"
 
 class Fetcher:
     def __init__(self, api_key: Optional[str] = None):
@@ -40,66 +40,60 @@ class Fetcher:
         match_type = getattr(topic, "match_type", "AND").upper()
         year_filter = f"{datetime.now().year - topic.filters.years_limit}-{datetime.now().year}"
         
-        papers_dict = {}
-        queries = []
-        
-        # Semantic Scholar search does not natively support an OR operator.
-        # It treats spaced terms as AND. If OR is chosen, we query each keyword separately.
+        # Semantic Scholar's bulk search API natively supports '|' for OR and ' ' for AND matching semantics.
+        # It handles boolean combinations much more reliably than standard relevance search.
         if match_type == "OR":
-            queries = [f'"{k}"' for k in topic.keywords]
-            limit_per_query = max(10, 50 // len(topic.keywords))
+            query = " | ".join([f'"{k}"' for k in topic.keywords])
         else:
-            queries = [" ".join([f'"{k}"' for k in topic.keywords])]
-            limit_per_query = 50
+            query = " ".join([f'"{k}"' for k in topic.keywords])
             
-        for q in queries:
-            params = {
-                "query": q,
-                "limit": limit_per_query,
-                "fields": S2_FIELDS,
-                "year": year_filter
-            }
+        params = {
+            "query": query,
+            "fields": S2_FIELDS,
+            "year": year_filter
+        }
+        
+        papers_dict = {}
+        
+        try:
+            logger.info(f"Searching Semantic Scholar (Bulk) for: {query}")
             
-            try:
-                logger.info(f"Searching Semantic Scholar for: {q}")
-                time.sleep(1) # Soft rate limit mitigation for multiple S2 queries
+            response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=30)
+            
+            if response.status_code == 429:
+                logger.warning(f"Semantic Scholar rate limit hit (429). URL: {response.url}")
+                return []
                 
-                response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=10)
-                
-                if response.status_code == 429:
-                    logger.warning(f"Semantic Scholar rate limit hit (429). Skipping remaining keywords. URL: {response.url}")
-                    break
+            response.raise_for_status()
+            
+            data = response.json()
+            for item in data.get("data", []):
+                pid = item.get("paperId", "")
+                if not pid or pid in papers_dict:
+                    continue
                     
-                response.raise_for_status()
+                journal_info = item.get("journal", {})
+                journal_name = journal_info.get("name") if journal_info else None
+                doi = item.get("externalIds", {}).get("DOI")
+                authors = [a.get("name") for a in item.get("authors", [])]
                 
-                data = response.json()
-                for item in data.get("data", []):
-                    pid = item.get("paperId", "")
-                    if not pid or pid in papers_dict:
-                        continue
-                        
-                    journal_info = item.get("journal", {})
-                    journal_name = journal_info.get("name") if journal_info else None
-                    doi = item.get("externalIds", {}).get("DOI")
-                    authors = [a.get("name") for a in item.get("authors", [])]
-                    
-                    paper = Paper(
-                        id=pid,
-                        title=item.get("title", ""),
-                        abstract=item.get("abstract"),
-                        authors=authors,
-                        journal=journal_name,
-                        publication_date=item.get("publicationDate"),
-                        doi=doi,
-                        url=item.get("url"),
-                        citation_count=item.get("citationCount", 0)
-                    )
-                    papers_dict[pid] = paper
-                    
-            except Exception as e:
-                error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{S2_SEARCH_URL} with {params}"
-                logger.error(f"Error fetching Semantic Scholar for '{q}': {e} | URL: {error_url}")
+                paper = Paper(
+                    id=pid,
+                    title=item.get("title", ""),
+                    abstract=item.get("abstract"),
+                    authors=authors,
+                    journal=journal_name,
+                    publication_date=item.get("publicationDate"),
+                    doi=doi,
+                    url=item.get("url"),
+                    citationCount=item.get("citationCount", 0)
+                )
+                papers_dict[pid] = paper
                 
+        except Exception as e:
+            error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{S2_SEARCH_URL} with {params}"
+            logger.error(f"Error fetching Semantic Scholar for '{query}': {e} | URL: {error_url}")
+            
         return list(papers_dict.values())
 
     def _fetch_arxiv(self, topic: Topic) -> List[Paper]:
