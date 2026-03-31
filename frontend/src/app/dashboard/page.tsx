@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, X, Save, LogOut, Sparkles } from 'lucide-react';
 
 const PRESET_KEYWORDS = [
@@ -230,11 +232,9 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
-                  <input
-                    type="checkbox"
+                  <Switch
                     checked={config.receive_email !== false}
-                    onChange={(e) => setConfig({ ...config, receive_email: e.target.checked })}
-                    className="w-5 h-5 accent-primary cursor-pointer"
+                    onCheckedChange={(checked) => setConfig({ ...config, receive_email: checked })}
                   />
                   <span className="text-sm font-medium">{config.receive_email !== false ? 'On' : 'Off'}</span>
                 </div>
@@ -258,14 +258,15 @@ export default function DashboardPage() {
                   <Label className="text-lg">Keywords</Label>
                   <div className="flex items-center gap-2">
                     <Label className="text-sm text-muted-foreground mr-2">Search Mode:</Label>
-                    <select 
-                      className="h-8 rounded-md border border-input bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      value={topic.match_type || 'AND'}
-                      onChange={(e) => updateTopicStringField(tIdx, 'match_type', e.target.value)}
-                    >
-                      <option value="AND">All (AND) - Strict</option>
-                      <option value="OR">Any (OR) - Broad</option>
-                    </select>
+                    <Select value={topic.match_type || 'AND'} onValueChange={(val) => updateTopicStringField(tIdx, 'match_type', val || '')}>
+                      <SelectTrigger className="w-[200px] h-9">
+                        <SelectValue placeholder="Select mode" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AND">All (AND) - Strict</SelectItem>
+                        <SelectItem value="OR">Any (OR) - Broad</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -349,16 +350,17 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Min Journal Rank (SJR)</Label>
-                  <select 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={topic.filters.min_journal_rank}
-                    onChange={(e) => updateFilter(tIdx, 'min_journal_rank', e.target.value)}
-                  >
-                    <option value="Q1">Q1 (Premium)</option>
-                    <option value="Q2">Q2 (Standard)</option>
-                    <option value="Q3">Q3</option>
-                    <option value="Q4">Q4</option>
-                  </select>
+                  <Select value={topic.filters.min_journal_rank} onValueChange={(val) => updateFilter(tIdx, 'min_journal_rank', val || '')}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select standard" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Q1">Q1 (Premium)</SelectItem>
+                      <SelectItem value="Q2">Q2 (Standard)</SelectItem>
+                      <SelectItem value="Q3">Q3</SelectItem>
+                      <SelectItem value="Q4">Q4</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Min Citations</Label>

@@ -7,22 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mail, Lock } from 'lucide-react';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const message = searchParams.get('message');
 
   useEffect(() => {
-    const msg = searchParams.get('message');
-    if (msg) setMessage(msg);
-
     // Listen for implicit grant (from email verification link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
          router.push('/dashboard');
       }
@@ -37,7 +35,6 @@ function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -60,26 +57,37 @@ function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="pl-9"
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           {message && <p className="text-sm text-blue-500">{message}</p>}
@@ -90,7 +98,7 @@ function LoginForm() {
       </CardContent>
       <CardFooter className="flex flex-col space-y-2 justify-center">
         <p className="text-sm text-muted-foreground">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Button variant="link" className="p-0" onClick={() => router.push('/signup')}>
             Sign Up
           </Button>
