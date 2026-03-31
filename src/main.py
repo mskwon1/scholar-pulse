@@ -62,8 +62,25 @@ def run_agent():
                 logger.info(f"All papers for topic: {topic.name} have already been sent.")
                 continue
                 
-            # Limit to top 3 papers per topic to avoid overwhelming
-            final_papers = sorted(new_papers, key=lambda x: x.citation_count, reverse=True)[:3]
+            # Custom Scoring: 최신성(Recency) 기반 가중치 부여
+            def get_score(p):
+                age = 0
+                if p.publication_date:
+                    try:
+                        # publication_date format can be YYYY-MM-DD or YYYY
+                        pub_year = int(str(p.publication_date)[:4])
+                        from datetime import datetime
+                        age = max(0, datetime.now().year - pub_year)
+                    except Exception:
+                        pass
+                
+                # 점수 공식: (인용수 + 1) / (연차 + 1)^1.5
+                # 예: 올해 출판(age=0) 논문 인용수 10 = 점수 11
+                # 예: 3년 전 출판(age=3) 논문 인용수 80 = 점수 81 / 8 = 10.125
+                return (p.citation_count + 1) / ((age + 1) ** 1.5)
+
+            # Limit to top 3 papers per topic based on the recency-weighted score
+            final_papers = sorted(new_papers, key=get_score, reverse=True)[:3]
             
             # 5. AI Analysis (Gemini)
             analyzed_papers = analyzer.analyze_papers(final_papers)

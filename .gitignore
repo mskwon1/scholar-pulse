@@ -19,6 +19,5 @@ __pycache__/
 *.swo
 
 # Project specific
-data/scimagojr.csv
 sent_papers.json
 user_config.json
