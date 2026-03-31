@@ -91,11 +91,17 @@ def run_agent():
             
         # 6. Delivery (Email via Resend)
         if all_selected_papers:
-            logger.info(f"Sending report with {len(all_selected_papers)} papers to {delivery_email}")
-            notifier.send_report(all_selected_papers, delivery_email)
+            # Filter out papers that failed AI analysis to ensure they can be retried tomorrow
+            valid_ai_papers = [p for p in all_selected_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."]
             
-            # 7. Record in DB
-            db.mark_as_sent(all_selected_papers)
+            if valid_ai_papers:
+                logger.info(f"Sending report with {len(valid_ai_papers)} successfully analyzed papers to {delivery_email}")
+                notifier.send_report(valid_ai_papers, delivery_email)
+                
+                # 7. Record ONLY valid papers in DB (failed ones will be retried next run)
+                db.mark_as_sent(valid_ai_papers)
+            else:
+                logger.warning(f"All {len(all_selected_papers)} papers failed AI analysis. Skipping email and DB record for user {user_id}.")
         else:
             logger.info(f"No new papers to report today for user {user_id}.")
 

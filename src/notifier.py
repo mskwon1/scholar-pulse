@@ -19,11 +19,14 @@ class Notifier:
             logger.error("RESEND_API_KEY not found. Email report skipped.")
             return
 
-        if not papers:
-            logger.info("No papers to report. Skipping email.")
+        # Filter out papers that don't have a valid summary
+        valid_papers = [p for p in papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."]
+
+        if not valid_papers:
+            logger.info("No valid papers with summaries to report. Skipping email.")
             return
 
-        html_content = self._generate_html(papers)
+        html_content = self._generate_html(valid_papers)
         
         try:
             logger.info(f"Sending email report to {to_email}...")
@@ -69,13 +72,20 @@ class Notifier:
                         else:
                             summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
 
+            # Format authors: limit to 10
+            authors_list = p.authors or []
+            if len(authors_list) > 10:
+                authors_str = f"{', '.join(authors_list[:10])} (+ {len(authors_list) - 10} more authors)"
+            else:
+                authors_str = ", ".join(authors_list)
+
             item = f"""
             <div style="background-color: #ffffff; margin-bottom: 24px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
                 <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 18px; line-height: 1.4; color: #4f46e5;">
                     <a href="{p.url or '#'}" target="_blank" style="color: #4f46e5; text-decoration: none; font-weight: 600;">{p.title}</a>
                 </h3>
                 <div style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
-                    <strong>Authors:</strong> {", ".join(p.authors)}<br>
+                    <strong>Authors:</strong> {authors_str}<br>
                     <strong>Journal:</strong> {p.journal or 'N/A'} <span style="background-color:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;">{p.sjr_rank or 'N/A'}</span><br>
                     <strong>Citations:</strong> {p.citation_count} | <strong>DOI:</strong> {p.doi or 'N/A'}
                 </div>
