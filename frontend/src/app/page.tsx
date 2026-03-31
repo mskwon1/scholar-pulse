@@ -1,0 +1,106 @@
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { GraduationCap, ArrowRight, Zap, Shield, Search } from "lucide-react";
+
+export default function Home() {
+  return (
+    <div className="flex flex-col min-h-screen bg-background text-foreground dark">
+      {/* Navigation */}
+      <header className="px-4 lg:px-6 h-14 flex items-center border-b border-border">
+        <Link className="flex items-center justify-center" href="#">
+          <GraduationCap className="h-6 w-6 mr-2" />
+          <span className="font-bold">Scholar Pulse</span>
+        </Link>
+        <nav className="ml-auto flex gap-4 sm:gap-6">
+          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/login">
+            Login
+          </Link>
+          <Link className="text-sm font-medium hover:underline underline-offset-4" href="/signup">
+            Sign Up
+          </Link>
+        </nav>
+      </header>
+
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 flex flex-col items-center justify-center text-center">
+          <div className="container px-4 md:px-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                  Stay at the Forefront of Research
+                </h1>
+                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                  Automated scholar monitoring, personalized filters, and direct email delivery. 
+                  Focus on insights, not search.
+                </p>
+              </div>
+              <div className="space-x-4">
+                <Link href="/signup">
+                  <Button size="lg" className="px-8">
+                    Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button variant="outline" size="lg" className="px-8">
+                    View Demo
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-secondary/30">
+          <div className="container px-4 md:px-6 mx-auto">
+            <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col items-center space-y-2 border border-border p-6 rounded-lg bg-card">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Zap className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Daily Automation</h2>
+                <p className="text-center text-muted-foreground">
+                  We scan top journals and pre-print servers daily so you don't have to.
+                </p>
+              </div>
+              <div className="flex flex-col items-center space-y-2 border border-border p-6 rounded-lg bg-card">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Search className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Smart Filtering</h2>
+                <p className="text-center text-muted-foreground">
+                  Filter by SJR rank, citation count, and specific keywords to find the signal in the noise.
+                </p>
+              </div>
+              <div className="flex flex-col items-center space-y-2 border border-border p-6 rounded-lg bg-card">
+                <div className="p-3 bg-primary/10 rounded-full">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold">Premium Quality</h2>
+                <p className="text-center text-muted-foreground">
+                  Focus on high-impact publications with our built-in journal ranking filters.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t border-border">
+        <p className="text-xs text-muted-foreground">
+          © 2026 Scholar Pulse Inc. All rights reserved.
+        </p>
+        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
+          <Link className="text-xs hover:underline underline-offset-4" href="#">
+            Terms of Service
+          </Link>
+          <Link className="text-xs hover:underline underline-offset-4" href="#">
+            Privacy
+          </Link>
+        </nav>
+      </footer>
+    </div>
+  );
+}
