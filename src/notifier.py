@@ -118,6 +118,13 @@ class Notifier:
                 
                 {"".join(items_html)}
                 
+                <div style="text-align: center; margin-top: 40px; margin-bottom: 20px;">
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 12px;">Want to change your research keywords or preferences?</p>
+                    <a href="https://scholar-pulse.mskwon.in/dashboard" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; font-size: 15px; font-weight: 600; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);">
+                        Go to Dashboard
+                    </a>
+                </div>
+                
                 <footer style="margin-top: 40px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px;">
                     <p style="margin: 0;">You're receiving this because you subscribed to daily research updates.</p>
                     <p style="margin: 4px 0 0 0;">Powered by Antigravity & Scholar Pulse</p>
