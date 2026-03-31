@@ -37,59 +37,81 @@ class Fetcher:
 
     def _fetch_s2(self, topic: Topic) -> List[Paper]:
         """Fetches papers from Semantic Scholar API using AND/OR logic."""
-        # Semantic Scholar uses space for AND, and '|' for OR
-        if getattr(topic, "match_type", "AND").upper() == "OR":
-            query = " | ".join([f'"{k}"' for k in topic.keywords])
-        else:
-            query = " ".join([f'"{k}"' for k in topic.keywords])
-            
-        params = {
-            "query": query,
-            "limit": 50,  # Max for searching
-            "fields": S2_FIELDS,
-            "year": f"{datetime.now().year - topic.filters.years_limit}-{datetime.now().year}"
-        }
+        match_type = getattr(topic, "match_type", "AND").upper()
+        year_filter = f"{datetime.now().year - topic.filters.years_limit}-{datetime.now().year}"
         
-        try:
-            logger.info(f"Searching Semantic Scholar for: {query}")
-            response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=10)
-            response.raise_for_status()
+        papers_dict = {}
+        queries = []
+        
+        # Semantic Scholar search does not natively support an OR operator.
+        # It treats spaced terms as AND. If OR is chosen, we query each keyword separately.
+        if match_type == "OR":
+            queries = [f'"{k}"' for k in topic.keywords]
+            limit_per_query = max(10, 50 // len(topic.keywords))
+        else:
+            queries = [" ".join([f'"{k}"' for k in topic.keywords])]
+            limit_per_query = 50
             
-            data = response.json()
-            papers = []
-            for item in data.get("data", []):
-                journal_info = item.get("journal", {})
-                journal_name = journal_info.get("name") if journal_info else None
-                
-                # Check for DOI in externalIds
-                doi = item.get("externalIds", {}).get("DOI")
-                
-                authors = [a.get("name") for a in item.get("authors", [])]
-                
-                paper = Paper(
-                    id=item.get("paperId", ""),
-                    title=item.get("title", ""),
-                    abstract=item.get("abstract"),
-                    authors=authors,
-                    journal=journal_name,
-                    publication_date=item.get("publicationDate"),
-                    doi=doi,
-                    url=item.get("url"),
-                    citation_count=item.get("citationCount", 0)
-                )
-                papers.append(paper)
-            return papers
+        for q in queries:
+            params = {
+                "query": q,
+                "limit": limit_per_query,
+                "fields": S2_FIELDS,
+                "year": year_filter
+            }
             
-        except Exception as e:
-            logger.error(f"Error fetching from Semantic Scholar: {e}")
-            return []
+            try:
+                logger.info(f"Searching Semantic Scholar for: {q}")
+                time.sleep(1) # Soft rate limit mitigation for multiple S2 queries
+                
+                response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=10)
+                
+                if response.status_code == 429:
+                    logger.warning("Semantic Scholar rate limit hit (429). Skipping remaining keywords for this topic.")
+                    break
+                    
+                response.raise_for_status()
+                
+                data = response.json()
+                for item in data.get("data", []):
+                    pid = item.get("paperId", "")
+                    if not pid or pid in papers_dict:
+                        continue
+                        
+                    journal_info = item.get("journal", {})
+                    journal_name = journal_info.get("name") if journal_info else None
+                    doi = item.get("externalIds", {}).get("DOI")
+                    authors = [a.get("name") for a in item.get("authors", [])]
+                    
+                    paper = Paper(
+                        id=pid,
+                        title=item.get("title", ""),
+                        abstract=item.get("abstract"),
+                        authors=authors,
+                        journal=journal_name,
+                        publication_date=item.get("publicationDate"),
+                        doi=doi,
+                        url=item.get("url"),
+                        citation_count=item.get("citationCount", 0)
+                    )
+                    papers_dict[pid] = paper
+                    
+            except Exception as e:
+                logger.error(f"Error fetching Semantic Scholar for '{q}': {e}")
+                
+        return list(papers_dict.values())
 
     def _fetch_arxiv(self, topic: Topic) -> List[Paper]:
         """Fetches papers from arXiv API using AND/OR logic with rate limit handling."""
         match_op = " OR " if getattr(topic, "match_type", "AND").upper() == "OR" else " AND "
         query = match_op.join([f'all:"{k}"' for k in topic.keywords])
         
-        url = f"http://export.arxiv.org/api/query?search_query={query}&start=0&max_results=20"
+        url = "http://export.arxiv.org/api/query"
+        params = {
+            "search_query": query,
+            "start": 0,
+            "max_results": 20
+        }
         headers = {"User-Agent": "ScholarPulse/1.0 (mailto:mageeeeek@gmail.com)"}
         
         max_retries = 3
@@ -102,7 +124,7 @@ class Fetcher:
                 else:
                     logger.info(f"Searching arXiv for: {query} (Retry {attempt}/{max_retries - 1})")
                     
-                response = requests.get(url, headers=headers, timeout=30)
+                response = requests.get(url, params=params, headers=headers, timeout=30)
                 
                 if response.status_code == 429:
                     logger.warning(f"arXiv rate limit hit (429). Sleeping for {delay} seconds...")
