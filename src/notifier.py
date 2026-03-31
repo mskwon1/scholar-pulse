@@ -69,11 +69,49 @@ class Notifier:
             else:
                 return f"<p style='color: #334155;'>{field_value}</p>"
 
+    def _format_summary_dict(self, field_value, default_text="N/A"):
+        """Safely parses a summary field (dict or string rep) into HTML with bolded subsections."""
+        import ast
+        import json
+
+        if not field_value or str(field_value).strip().lower() == "analysis pending...":
+            return f"<p style='color: #64748b; font-style: italic;'>{default_text}</p>"
+
+        # Parse string if necessary
+        data = field_value
+        if isinstance(field_value, str):
+            try:
+                # Try JSON first for robust double quotes parsing
+                # Python sometimes has Single Quoted strings from DB, json.loads fails.
+                # Replace pseudo-quotes if needed, or rely on literal_eval.
+                data = json.loads(field_value)
+            except Exception:
+                try:
+                    data = ast.literal_eval(field_value)
+                except Exception:
+                    # Fallback to list formatter if it's completely malformed
+                    return self._format_list_to_html(field_value, default_text)
+
+        if isinstance(data, dict):
+            sections = []
+            # Specifically check for Background, Methodology, Key Results if present
+            # or just iterate through whatever keys are provided.
+            for key, val in data.items():
+                sections.append(f"<li style='margin-bottom: 8px;'><strong style='color: #0f172a;'>{key}:</strong> {val}</li>")
+            
+            if sections:
+                return f"<ul style='margin: 5px 0 0 0; padding: 0; list-style-type: none; color: #334155;'>{''.join(sections)}</ul>"
+            else:
+                return f"<p style='color: #64748b; font-style: italic;'>{default_text}</p>"
+        else:
+            # Fallback if it happened to be a list (compatibility with older records)
+            return self._format_list_to_html(field_value, default_text)
+
     def _generate_html(self, papers: List[Paper]) -> str:
         """Generates the HTML content for the report email."""
         items_html = []
         for p in papers:
-            summary_html = self._format_list_to_html(p.summary, "Analysis pending...")
+            summary_html = self._format_summary_dict(p.summary, "Analysis pending...")
             novelty_html = self._format_list_to_html(p.novelty)
             impact_html = self._format_list_to_html(p.impact)
 
