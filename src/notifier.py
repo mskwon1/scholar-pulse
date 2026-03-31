@@ -45,25 +45,29 @@ class Notifier:
 
         items_html = []
         for p in papers:
-            # Parse summary list if it's a string representation of a Python list
+            # Parse summary list if it's already a list or a string representation
             summary_html = "<p style='color: #64748b; font-style: italic;'>Analysis pending...</p>"
             if p.summary:
-                try:
-                    summary_list = ast.literal_eval(p.summary)
-                    if isinstance(summary_list, list):
-                        li_items = "".join([f"<li style='margin-bottom: 8px;'>{item}</li>" for item in summary_list])
-                        summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
-                    else:
-                        summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
-                except Exception:
-                    # Fallback to simple split logic if literal_eval fails (e.g., if array string is malformed)
-                    clean_text = re.sub(r"^\[|\]$", "", p.summary)
-                    parts = [part.strip().strip("'\"") for part in clean_text.split("', '") if part.strip()]
-                    if len(parts) > 1:
-                        li_items = "".join([f"<li style='margin-bottom: 8px;'>{item}</li>" for item in parts])
-                        summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
-                    else:
-                        summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
+                if isinstance(p.summary, list):
+                    li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in p.summary])
+                    summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
+                else:
+                    try:
+                        summary_list = ast.literal_eval(p.summary)
+                        if isinstance(summary_list, list):
+                            li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in summary_list])
+                            summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
+                        else:
+                            summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
+                    except Exception:
+                        # Fallback to simple split logic if literal_eval fails
+                        clean_text = re.sub(r"^\[|\]$", "", str(p.summary))
+                        parts = [part.strip().strip("'\"") for part in clean_text.split("', '") if part.strip()]
+                        if len(parts) > 1:
+                            li_items = "".join([f"<li style='margin-bottom: 8px;'>{str(item)}</li>" for item in parts])
+                            summary_html = f"<ul style='padding-left: 20px; margin-top: 5px; color: #334155;'>{li_items}</ul>"
+                        else:
+                            summary_html = f"<p style='color: #334155;'>{p.summary}</p>"
 
             item = f"""
             <div style="background-color: #ffffff; margin-bottom: 24px; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
