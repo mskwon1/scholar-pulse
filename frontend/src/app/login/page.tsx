@@ -1,8 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { Lock, Mail } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,17 +20,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 
+const loginSchema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: async (data: LoginFormData) => {
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+      if (error) throw new Error(error.message);
+      return authData;
+    },
+    onSuccess: () => {
+      router.push('/dashboard');
+    },
+  });
+
   useEffect(() => {
-    // Listen for implicit grant (from email verification link)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
@@ -40,24 +69,6 @@ function LoginForm() {
     };
   }, [router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push('/dashboard');
-    }
-    setLoading(false);
-  };
-
   return (
     <Card className="w-[400px]">
       <CardHeader>
@@ -67,7 +78,10 @@ function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form
+          onSubmit={handleSubmit((data) => loginMutation.mutate(data))}
+          className="space-y-4"
+        >
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -76,13 +90,16 @@ function LoginForm() {
                 <Input
                   id="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...register('email')}
                   placeholder="name@example.com"
                   className="pl-9"
-                  required
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -91,19 +108,30 @@ function LoginForm() {
                 <Input
                   id="password"
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  {...register('password')}
                   className="pl-9"
                   placeholder="••••••••"
-                  required
                 />
               </div>
+              {errors.password && (
+                <p className="text-xs text-destructive">
+                  {errors.password.message}
+                </p>
+              )}
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {loginMutation.error && (
+            <p className="text-sm text-destructive">
+              {loginMutation.error.message}
+            </p>
+          )}
           {message && <p className="text-sm text-blue-500">{message}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loginMutation.isPending}
+          >
+            {loginMutation.isPending ? 'Logging in...' : 'Login'}
           </Button>
         </form>
       </CardContent>
@@ -111,6 +139,7 @@ function LoginForm() {
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
           <Button
+            type="button"
             variant="link"
             className="p-0"
             onClick={() => router.push('/signup')}
@@ -118,7 +147,12 @@ function LoginForm() {
             Sign Up
           </Button>
         </p>
-        <Button variant="link" size="sm" onClick={() => router.push('/')}>
+        <Button
+          type="button"
+          variant="link"
+          size="sm"
+          onClick={() => router.push('/')}
+        >
           Back to Home
         </Button>
       </CardFooter>

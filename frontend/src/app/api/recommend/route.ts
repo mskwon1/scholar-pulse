@@ -60,7 +60,13 @@ Return ONLY a valid JSON array of 10 string items, and absolutely no markdown or
 
     const keywords = JSON.parse(resultText);
     return NextResponse.json({ keywords });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json(
+      { error: 'An unknown error occurred.' },
+      { status: 500 }
+    );
   }
 }

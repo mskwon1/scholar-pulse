@@ -1,8 +1,12 @@
 'use client';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { Lock, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,40 +20,49 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
 
+const signupSchema = z
+  .object({
+    email: z.string().email('Please enter a valid email address'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirmPassword: z
+      .string()
+      .min(6, 'Password must be at least 6 characters'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+type SignupFormData = z.infer<typeof signupSchema>;
+
 export default function SignupPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { email: '', password: '', confirmPassword: '' },
+  });
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setLoading(false);
-      return;
-    }
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/login`,
-      },
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
+  const signupMutation = useMutation({
+    mutationFn: async (data: SignupFormData) => {
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`,
+        },
+      });
+      if (error) throw new Error(error.message);
+      return authData;
+    },
+    onSuccess: () => {
       router.push('/login?message=Check your email to confirm your account.');
-    }
-    setLoading(false);
-  };
+    },
+  });
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background text-foreground dark">
@@ -61,7 +74,10 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
+          <form
+            onSubmit={handleSubmit((data) => signupMutation.mutate(data))}
+            className="space-y-4"
+          >
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -70,13 +86,16 @@ export default function SignupPage() {
                   <Input
                     id="email"
                     type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    {...register('email')}
                     placeholder="name@example.com"
                     className="pl-9"
-                    required
                   />
                 </div>
+                {errors.email && (
+                  <p className="text-xs text-destructive">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -85,13 +104,16 @@ export default function SignupPage() {
                   <Input
                     id="password"
                     type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    {...register('password')}
                     className="pl-9"
                     placeholder="••••••••"
-                    required
                   />
                 </div>
+                {errors.password && (
+                  <p className="text-xs text-destructive">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -100,18 +122,29 @@ export default function SignupPage() {
                   <Input
                     id="confirmPassword"
                     type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    {...register('confirmPassword')}
                     className="pl-9"
                     placeholder="••••••••"
-                    required
                   />
                 </div>
+                {errors.confirmPassword && (
+                  <p className="text-xs text-destructive">
+                    {errors.confirmPassword.message}
+                  </p>
+                )}
               </div>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing up...' : 'Sign Up'}
+            {signupMutation.error && (
+              <p className="text-sm text-destructive">
+                {signupMutation.error.message}
+              </p>
+            )}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={signupMutation.isPending}
+            >
+              {signupMutation.isPending ? 'Signing up...' : 'Sign Up'}
             </Button>
           </form>
         </CardContent>
@@ -119,6 +152,7 @@ export default function SignupPage() {
           <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
             <Button
+              type="button"
               variant="link"
               className="p-0"
               onClick={() => router.push('/login')}

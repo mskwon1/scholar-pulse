@@ -1,10 +1,15 @@
 'use client';
 
-import type { User } from '@supabase/supabase-js';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAtom } from 'jotai';
 import { LogOut, Plus, Save, Sparkles, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,6 +28,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+
+import { queryKeys } from '@/lib/query-keys';
+import { aiPromptsAtom, recommendingAtom, userAtom } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 
 const PRESET_KEYWORDS = [
@@ -47,130 +55,151 @@ const PRESET_KEYWORDS = [
   'Bioinformatics',
   'Microplastics',
 ];
+const topicSchema = z.object({
+  name: z.string(),
+  keywords: z.array(z.string()),
+  match_type: z.string(),
+  filters: z.object({
+    years_limit: z.number(),
+    min_journal_rank: z.string(),
+    min_citations: z.number(),
+  }),
+});
 
-interface Topic {
-  name: string;
-  keywords: string[];
-  match_type: string;
-  filters: {
-    years_limit: number;
-    min_journal_rank: string;
-    min_citations: number;
-  };
-}
+const userConfigSchema = z.object({
+  topics: z.array(topicSchema),
+  schedule: z.string(),
+  delivery: z.string(),
+  receive_email: z.boolean(),
+});
 
-interface UserConfig {
-  topics: Topic[];
-  schedule: string;
-  delivery: string;
-  receive_email?: boolean;
-}
+type UserConfig = z.infer<typeof userConfigSchema>;
 
 export default function DashboardPage() {
-  const [config, setConfig] = useState<UserConfig | null>(null);
-  const [originalConfig, setOriginalConfig] = useState<UserConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [aiPrompts, setAiPrompts] = useState<{ [key: number]: string }>({});
-  const [recommending, setRecommending] = useState<{ [key: number]: boolean }>(
-    {}
-  );
-
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const fetchConfig = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_config')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+  const [user, setUser] = useAtom(userAtom);
+  const [aiPrompts, setAiPrompts] = useAtom(aiPromptsAtom);
+  const [recommending, setRecommending] = useAtom(recommendingAtom);
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching config:', error);
-      } else if (data) {
-        setConfig(
-          data.config || {
-            topics: [],
-            schedule: 'daily',
-            delivery: 'email',
-            receive_email: true,
-          }
-        );
-        setOriginalConfig(
-          data.config || {
-            topics: [],
-            schedule: 'daily',
-            delivery: 'email',
-            receive_email: true,
-          }
-        );
-      } else {
-        // Default config if none exists
-        const defaultCfg = {
-          topics: [
-            {
-              name: 'Default Topic',
-              keywords: [],
-              match_type: 'AND',
-              filters: {
-                years_limit: 3,
-                min_journal_rank: 'Q2',
-                min_citations: 5,
-              },
-            },
-          ],
-          schedule: 'daily',
-          delivery: 'email',
-          receive_email: true,
-        };
-        setConfig(defaultCfg);
-        setOriginalConfig(defaultCfg);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // 1. Auth Check
   useEffect(() => {
     const checkUser = async () => {
       const {
-        data: { user },
+        data: { user: currentUser },
       } = await supabase.auth.getUser();
-      if (!user) {
+      if (!currentUser) {
         router.push('/login');
       } else {
-        setUser(user);
-        fetchConfig(user.id);
+        setUser(currentUser);
       }
     };
     checkUser();
-  }, [router, fetchConfig]);
+  }, [router, setUser]);
 
-  const handleSave = async () => {
-    if (!user || !config) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from('user_config')
-      .upsert({ user_id: user.id, config: config }, { onConflict: 'user_id' });
+  // 2. Fetch Config
+  const { data: queryData, isLoading: isLoadingConfig } = useQuery({
+    queryKey: queryKeys.config.detail(user?.id ?? ''),
+    queryFn: async () => {
+      if (!user?.id) throw new Error('No user id');
+      const { data, error } = await supabase
+        .from('user_config')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    if (error) {
-      alert(`Failed to save configuration: ${error.message}`);
-    } else {
-      setOriginalConfig(config);
-      alert('Configuration saved successfully!');
+      if (error && error.code !== 'PGRST116') {
+        throw new Error(error.message);
+      }
+
+      const defaultCfg: UserConfig = {
+        topics: [
+          {
+            name: 'Default Topic',
+            keywords: [],
+            match_type: 'AND',
+            filters: {
+              years_limit: 3,
+              min_journal_rank: 'Q2',
+              min_citations: 5,
+            },
+          },
+        ],
+        schedule: 'daily',
+        delivery: 'email',
+        receive_email: true,
+      };
+
+      return (data?.config as UserConfig) || defaultCfg;
+    },
+    enabled: !!user?.id,
+  });
+
+  // 3. Form Setup
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    getValues,
+    watch,
+    reset,
+    register,
+    formState: { isDirty },
+  } = useForm<UserConfig>({
+    resolver: zodResolver(userConfigSchema),
+  });
+
+  // Sync Data
+  useEffect(() => {
+    if (queryData) {
+      reset(queryData);
     }
-    setSaving(false);
+  }, [queryData, reset]);
+
+  const { fields: topics } = useFieldArray({
+    control,
+    name: 'topics',
+  });
+
+  // 4. Save Mutation
+  const saveMutation = useMutation({
+    mutationFn: async (configData: UserConfig) => {
+      if (!user) throw new Error('Not logged in');
+      const { error } = await supabase
+        .from('user_config')
+        .upsert(
+          { user_id: user.id, config: configData },
+          { onConflict: 'user_id' }
+        );
+      if (error) throw new Error(error.message);
+      return configData;
+    },
+    onSuccess: (savedData) => {
+      if (user) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.config.detail(user.id),
+        });
+      }
+      reset(savedData);
+      alert('Configuration saved successfully!');
+    },
+    onError: (err) => {
+      alert(`Failed to save configuration: ${err.message}`);
+    },
+  });
+
+  const onSubmit = (data: UserConfig) => {
+    saveMutation.mutate(data);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setUser(null);
     router.push('/login');
   };
 
   const handleRecommendKeywords = async (topicIndex: number) => {
-    if (!config) return;
     const prompt = aiPrompts[topicIndex];
     if (!prompt) return;
     setRecommending((prev) => ({ ...prev, [topicIndex]: true }));
@@ -182,13 +211,18 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (data.keywords && Array.isArray(data.keywords)) {
-        const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
-        const existing = newConfig.topics[topicIndex].keywords || [];
+        const currentKeywords =
+          getValues(`topics.${topicIndex}.keywords`) || [];
         const newKeys = data.keywords.filter(
-          (k: string) => !existing.includes(k)
+          (k: string) => !currentKeywords.includes(k)
         );
-        newConfig.topics[topicIndex].keywords = [...existing, ...newKeys];
-        setConfig(newConfig);
+        setValue(
+          `topics.${topicIndex}.keywords`,
+          [...currentKeywords, ...newKeys],
+          {
+            shouldDirty: true,
+          }
+        );
       } else {
         alert(data.error || 'Failed to fetch recommendations');
       }
@@ -198,63 +232,27 @@ export default function DashboardPage() {
     setRecommending((prev) => ({ ...prev, [topicIndex]: false }));
   };
 
-  const updateTopicStringField = (
-    topicIndex: number,
-    field: keyof Topic,
-    value: string
-  ) => {
-    if (!config) return;
-    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
-    (newConfig.topics[topicIndex] as unknown as Record<string, string>)[field] =
-      value;
-    setConfig(newConfig);
-  };
-
   const addKeyword = (topicIndex: number, keyword: string) => {
-    if (!config || !keyword?.trim()) return;
+    if (!keyword?.trim()) return;
     const trimmed = keyword.trim();
-    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
-    if (!newConfig.topics[topicIndex].keywords.includes(trimmed)) {
-      newConfig.topics[topicIndex].keywords = [
-        ...newConfig.topics[topicIndex].keywords,
-        trimmed,
-      ];
-      setConfig(newConfig);
+    const currentKeywords = getValues(`topics.${topicIndex}.keywords`) || [];
+    if (!currentKeywords.includes(trimmed)) {
+      setValue(`topics.${topicIndex}.keywords`, [...currentKeywords, trimmed], {
+        shouldDirty: true,
+      });
     }
   };
 
   const removeKeyword = (topicIndex: number, keywordIndex: number) => {
-    if (!config) return;
-    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
-    const newKeywords = [...newConfig.topics[topicIndex].keywords];
+    const currentKeywords = getValues(`topics.${topicIndex}.keywords`) || [];
+    const newKeywords = [...currentKeywords];
     newKeywords.splice(keywordIndex, 1);
-    newConfig.topics[topicIndex].keywords = newKeywords;
-    setConfig(newConfig);
+    setValue(`topics.${topicIndex}.keywords`, newKeywords, {
+      shouldDirty: true,
+    });
   };
 
-  const updateFilter = (
-    topicIndex: number,
-    field: string,
-    value: string | number
-  ) => {
-    if (!config) return;
-    const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
-    // Handle numeric values
-    let finalValue = value;
-    if (field === 'years_limit' || field === 'min_citations') {
-      finalValue = parseInt(String(value), 10);
-      if (Number.isNaN(finalValue)) finalValue = 0;
-    }
-    (
-      newConfig.topics[topicIndex].filters as unknown as Record<
-        string,
-        number | string
-      >
-    )[field] = finalValue;
-    setConfig(newConfig);
-  };
-
-  if (loading) {
+  if (isLoadingConfig || !queryData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen space-y-4 bg-background text-foreground dark">
         <div className="relative w-12 h-12">
@@ -270,8 +268,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const hasChanges = JSON.stringify(config) !== JSON.stringify(originalConfig);
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 pb-32 dark">
@@ -304,7 +300,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {config && (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <Card>
             <CardHeader>
               <CardTitle>Email Notifications</CardTitle>
@@ -328,232 +324,271 @@ export default function DashboardPage() {
                   </p>
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
-                  <Switch
-                    checked={config.receive_email !== false}
-                    onCheckedChange={(checked) =>
-                      setConfig({ ...config, receive_email: checked })
-                    }
+                  <Controller
+                    control={control}
+                    name="receive_email"
+                    render={({ field }) => (
+                      <>
+                        <Switch
+                          checked={field.value !== false}
+                          onCheckedChange={(checked) => field.onChange(checked)}
+                        />
+                        <span className="text-sm font-medium">
+                          {field.value !== false ? 'On' : 'Off'}
+                        </span>
+                      </>
+                    )}
                   />
-                  <span className="text-sm font-medium">
-                    {config.receive_email !== false ? 'On' : 'Off'}
-                  </span>
                 </div>
               </div>
             </CardContent>
           </Card>
-        )}
 
-        {config?.topics.map((topic, tIdx) => (
-          <Card key={tIdx}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Topic: {topic.name}</span>
-              </CardTitle>
-              <CardDescription>
-                Configure search parameters for this research topic.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Keywords Section */}
-              <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
-                  <Label className="text-lg">Keywords</Label>
-                  <div className="flex items-center justify-between w-full md:w-auto gap-2">
-                    <Label className="text-sm text-muted-foreground shrink-0">
-                      Search Mode:
-                    </Label>
-                    <Select
-                      value={topic.match_type || 'AND'}
-                      onValueChange={(val) =>
-                        updateTopicStringField(tIdx, 'match_type', val || '')
-                      }
-                    >
-                      <SelectTrigger className="w-[160px] md:w-[200px] h-9">
-                        <SelectValue placeholder="Select mode" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="AND">All (AND) - Strict</SelectItem>
-                        <SelectItem value="OR">Any (OR) - Broad</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+          {topics.map((topic, tIdx) => {
+            const currentKeywords = watch(`topics.${tIdx}.keywords`) || [];
 
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {topic.keywords.map((kw, kIdx) => (
-                    <span
-                      key={kIdx}
-                      className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm"
-                    >
-                      {kw}
-                      <button
-                        type="button"
-                        onClick={() => removeKeyword(tIdx, kIdx)}
-                        className="ml-2 hover:text-destructive"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+            return (
+              <Card key={topic.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Topic: {watch(`topics.${tIdx}.name`)}</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Configure search parameters for this research topic.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Keywords Section */}
+                  <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
+                      <Label className="text-lg">Keywords</Label>
+                      <div className="flex items-center justify-between w-full md:w-auto gap-2">
+                        <Label className="text-sm text-muted-foreground shrink-0">
+                          Search Mode:
+                        </Label>
+                        <Controller
+                          control={control}
+                          name={`topics.${tIdx}.match_type`}
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger className="w-[160px] md:w-[200px] h-9">
+                                <SelectValue placeholder="Select mode" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="AND">
+                                  All (AND) - Strict
+                                </SelectItem>
+                                <SelectItem value="OR">
+                                  Any (OR) - Broad
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+                    </div>
 
-                {/* Hybrid UI: Manual Input */}
-                <div className="flex gap-2">
-                  <Input
-                    id={`kw-input-${tIdx}`}
-                    placeholder="Type keyword and press Enter..."
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        addKeyword(tIdx, (e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = '';
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => {
-                      const input = document.getElementById(
-                        `kw-input-${tIdx}`
-                      ) as HTMLInputElement;
-                      if (input) {
-                        addKeyword(tIdx, input.value);
-                        input.value = '';
-                      }
-                    }}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Hybrid UI: AI Generator */}
-                <div className="flex flex-col md:flex-row gap-2 md:items-center bg-muted/50 p-3 rounded-md border border-dashed">
-                  <Input
-                    placeholder="Describe topic for AI to suggest keywords... (e.g. LLM in Healthcare)"
-                    value={aiPrompts[tIdx] || ''}
-                    onChange={(e) =>
-                      setAiPrompts((prev) => ({
-                        ...prev,
-                        [tIdx]: e.target.value,
-                      }))
-                    }
-                    className="w-full grow"
-                  />
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleRecommendKeywords(tIdx)}
-                    disabled={recommending[tIdx] || !aiPrompts[tIdx]}
-                    className="w-full md:w-auto shrink-0"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2 text-primary" />
-                    {recommending[tIdx] ? 'Thinking...' : 'AI Recommend'}
-                  </Button>
-                </div>
-
-                {/* Preset Badges UI */}
-                <div className="mt-4">
-                  <Label className="text-xs text-muted-foreground block mb-2">
-                    Preset Keywords (Click to add):
-                  </Label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_KEYWORDS.map((preset, pIdx) => {
-                      const isActive = topic.keywords.includes(preset);
-                      return (
-                        <button
-                          type="button"
-                          key={pIdx}
-                          disabled={isActive}
-                          onClick={() => addKeyword(tIdx, preset)}
-                          className={`text-xs px-2 py-1 border rounded-md transition-colors ${isActive ? 'bg-primary/20 border-primary/30 text-primary opacity-50 cursor-not-allowed' : 'bg-background hover:bg-muted text-muted-foreground'}`}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {currentKeywords.map((kw, kIdx) => (
+                        <span
+                          key={kw}
+                          className="inline-flex items-center px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm"
                         >
-                          {preset}
-                        </button>
-                      );
-                    })}
+                          {kw}
+                          <button
+                            type="button"
+                            onClick={() => removeKeyword(tIdx, kIdx)}
+                            className="ml-2 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Hybrid UI: Manual Input */}
+                    <div className="flex gap-2">
+                      <Input
+                        id={`kw-input-${tIdx}`}
+                        placeholder="Type keyword and press Enter..."
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault(); // Prevent implicit form submission
+                            addKeyword(
+                              tIdx,
+                              (e.target as HTMLInputElement).value
+                            );
+                            (e.target as HTMLInputElement).value = '';
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const input = document.getElementById(
+                            `kw-input-${tIdx}`
+                          ) as HTMLInputElement;
+                          if (input) {
+                            addKeyword(tIdx, input.value);
+                            input.value = '';
+                          }
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {/* Hybrid UI: AI Generator */}
+                    <div className="flex flex-col md:flex-row gap-2 md:items-center bg-muted/50 p-3 rounded-md border border-dashed">
+                      <Input
+                        placeholder="Describe topic for AI to suggest keywords... (e.g. LLM in Healthcare)"
+                        value={aiPrompts[tIdx] || ''}
+                        onChange={(e) =>
+                          setAiPrompts((prev) => ({
+                            ...prev,
+                            [tIdx]: e.target.value,
+                          }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="w-full grow"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => handleRecommendKeywords(tIdx)}
+                        disabled={recommending[tIdx] || !aiPrompts[tIdx]}
+                        className="w-full md:w-auto shrink-0"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2 text-primary" />
+                        {recommending[tIdx] ? 'Thinking...' : 'AI Recommend'}
+                      </Button>
+                    </div>
+
+                    {/* Preset Badges UI */}
+                    <div className="mt-4">
+                      <Label className="text-xs text-muted-foreground block mb-2">
+                        Preset Keywords (Click to add):
+                      </Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {PRESET_KEYWORDS.map((preset) => {
+                          const isActive = currentKeywords.includes(preset);
+                          return (
+                            <button
+                              type="button"
+                              key={preset}
+                              disabled={isActive}
+                              onClick={() => addKeyword(tIdx, preset)}
+                              className={`text-xs px-2 py-1 border rounded-md transition-colors ${
+                                isActive
+                                  ? 'bg-primary/20 border-primary/30 text-primary opacity-50 cursor-not-allowed'
+                                  : 'bg-background hover:bg-muted text-muted-foreground'
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Filters Section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label>Year Limit (Last X years)</Label>
-                  <Input
-                    type="number"
-                    value={topic.filters.years_limit}
-                    onChange={(e) =>
-                      updateFilter(tIdx, 'years_limit', e.target.value)
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Min Journal Rank (SJR)</Label>
-                  <Select
-                    value={topic.filters.min_journal_rank}
-                    onValueChange={(val) =>
-                      updateFilter(tIdx, 'min_journal_rank', val || '')
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select standard" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Q1">Q1 (Premium)</SelectItem>
-                      <SelectItem value="Q2">Q2 (Standard)</SelectItem>
-                      <SelectItem value="Q3">Q3</SelectItem>
-                      <SelectItem value="Q4">Q4</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Min Citations</Label>
-                  <Input
-                    type="number"
-                    value={topic.filters.min_citations}
-                    onChange={(e) =>
-                      updateFilter(tIdx, 'min_citations', e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  {/* Filters Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label>Year Limit (Last X years)</Label>
+                      <Input
+                        type="number"
+                        {...register(`topics.${tIdx}.filters.years_limit`, {
+                          valueAsNumber: true,
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Min Journal Rank (SJR)</Label>
+                      <Controller
+                        control={control}
+                        name={`topics.${tIdx}.filters.min_journal_rank`}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select standard" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Q1">Q1 (Premium)</SelectItem>
+                              <SelectItem value="Q2">Q2 (Standard)</SelectItem>
+                              <SelectItem value="Q3">Q3</SelectItem>
+                              <SelectItem value="Q4">Q4</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Min Citations</Label>
+                      <Input
+                        type="number"
+                        {...register(`topics.${tIdx}.filters.min_citations`, {
+                          valueAsNumber: true,
+                        })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
-      {/* Fixed Footer Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/95 backdrop-blur-md border-t border-border/40 shadow-[0_-4px_15px_rgba(0,0,0,0.1)] transition-all duration-300">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="hidden md:flex flex-col">
-            <p
-              className={`font-semibold transition-colors duration-300 ${hasChanges ? 'text-primary' : 'text-muted-foreground'}`}
-            >
-              {hasChanges ? 'You have unsaved changes' : 'All changes saved'}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {hasChanges
-                ? 'Please save your configuration to apply.'
-                : 'Your settings are up to date.'}
-            </p>
+          {/* Fixed Footer Bar */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/95 backdrop-blur-md border-t border-border/40 shadow-[0_-4px_15px_rgba(0,0,0,0.1)] transition-all duration-300">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div className="hidden md:flex flex-col">
+                <p
+                  className={`font-semibold transition-colors duration-300 ${isDirty ? 'text-primary' : 'text-muted-foreground'}`}
+                >
+                  {isDirty ? 'You have unsaved changes' : 'All changes saved'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isDirty
+                    ? 'Please save your configuration to apply.'
+                    : 'Your settings are up to date.'}
+                </p>
+              </div>
+              <div className="w-full md:w-auto flex justify-center md:justify-end">
+                <Button
+                  type="submit"
+                  disabled={saveMutation.isPending || !isDirty}
+                  size="lg"
+                  className={`w-full md:w-auto transition-all duration-500 relative overflow-hidden ${
+                    isDirty
+                      ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(79,70,229,0.5)] ring-2 ring-primary/50 ring-offset-2 ring-offset-background'
+                      : 'bg-muted/50 text-muted-foreground border border-dashed border-muted-foreground/30'
+                  }`}
+                >
+                  <Save className="w-5 h-5 mr-2 relative z-10" />
+                  <span className="relative z-10 font-bold">
+                    {saveMutation.isPending
+                      ? 'Saving...'
+                      : isDirty
+                        ? 'Save Changes!'
+                        : 'Saved'}
+                  </span>
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="w-full md:w-auto flex justify-center md:justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={saving || !hasChanges}
-              size="lg"
-              className={`w-full md:w-auto transition-all duration-500 relative overflow-hidden ${
-                hasChanges
-                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(79,70,229,0.5)] ring-2 ring-primary/50 ring-offset-2 ring-offset-background'
-                  : 'bg-muted/50 text-muted-foreground border border-dashed border-muted-foreground/30'
-              }`}
-            >
-              <Save className="w-5 h-5 mr-2 relative z-10" />
-              <span className="relative z-10 font-bold">
-                {saving ? 'Saving...' : hasChanges ? 'Save Changes!' : 'Saved'}
-              </span>
-            </Button>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );
