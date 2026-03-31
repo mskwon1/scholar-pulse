@@ -90,7 +90,7 @@ class Fetcher:
         query = match_op.join([f'all:"{k}"' for k in topic.keywords])
         
         url = f"http://export.arxiv.org/api/query?search_query={query}&start=0&max_results=20"
-        headers = {"User-Agent": "ScholarPulse/1.0 (mailto:admin@scholarpulse.local)"}
+        headers = {"User-Agent": "ScholarPulse/1.0 (mailto:mageeeeek@gmail.com)"}
         
         max_retries = 3
         delay = 3
