@@ -1,13 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { Lock, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Lock } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -23,7 +30,7 @@ export default function SignupPage() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError('Passwords do not match');
       setLoading(false);
       return;
     }
@@ -49,7 +56,9 @@ export default function SignupPage() {
       <Card className="w-[400px]">
         <CardHeader>
           <CardTitle>Sign Up</CardTitle>
-          <CardDescription>Create a new account to manage your Scholar Pulse.</CardDescription>
+          <CardDescription>
+            Create a new account to manage your Scholar Pulse.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
@@ -109,7 +118,11 @@ export default function SignupPage() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Button variant="link" className="p-0" onClick={() => router.push('/login')}>
+            <Button
+              variant="link"
+              className="p-0"
+              onClick={() => router.push('/login')}
+            >
               Login
             </Button>
           </p>

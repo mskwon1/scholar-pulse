@@ -1,26 +1,27 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Scholar Pulse",
-    template: "%s | Scholar Pulse",
+    default: 'Scholar Pulse',
+    template: '%s | Scholar Pulse',
   },
-  description: "Your AI-curated daily research insights. Discover breakthroughs without the manual search.",
+  description:
+    'Your AI-curated daily research insights. Discover breakthroughs without the manual search.',
   icons: {
-    icon: "/logo.png",
-  }
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({

@@ -1,13 +1,20 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { supabase } from '@/lib/supabase';
+import { Lock, Mail } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Lock } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -20,16 +27,18 @@ function LoginForm() {
 
   useEffect(() => {
     // Listen for implicit grant (from email verification link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
-         router.push('/dashboard');
+        router.push('/dashboard');
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [searchParams, router]);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +62,9 @@ function LoginForm() {
     <Card className="w-[400px]">
       <CardHeader>
         <CardTitle>Login</CardTitle>
-        <CardDescription>Login to manage your Scholar Pulse settings.</CardDescription>
+        <CardDescription>
+          Login to manage your Scholar Pulse settings.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">
@@ -99,7 +110,11 @@ function LoginForm() {
       <CardFooter className="flex flex-col space-y-2 justify-center">
         <p className="text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
-          <Button variant="link" className="p-0" onClick={() => router.push('/signup')}>
+          <Button
+            variant="link"
+            className="p-0"
+            onClick={() => router.push('/signup')}
+          >
             Sign Up
           </Button>
         </p>
@@ -114,14 +129,18 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background text-foreground dark">
-      <Suspense fallback={
-        <div className="flex flex-col items-center justify-center w-full min-h-[50vh] space-y-4">
-          <div className="relative w-8 h-8">
-            <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-primary animate-spin"></div>
+      <Suspense
+        fallback={
+          <div className="flex flex-col items-center justify-center w-full min-h-[50vh] space-y-4">
+            <div className="relative w-8 h-8">
+              <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-primary animate-spin"></div>
+            </div>
+            <p className="text-sm font-medium text-muted-foreground animate-pulse">
+              Loading...
+            </p>
           </div>
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading...</p>
-        </div>
-      }>
+        }
+      >
         <LoginForm />
       </Suspense>
     </div>

@@ -1,50 +1,51 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import type { User } from '@supabase/supabase-js';
+import { LogOut, Plus, Save, Sparkles, X } from 'lucide-react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Plus, X, Save, LogOut, Sparkles } from "lucide-react";
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/lib/supabase';
 
 const PRESET_KEYWORDS = [
-  "LLM",
-  "Agent",
-  "RAG",
-  "Prompt Engineering",
-  "Quantum Computing",
-  "Solid-State Battery",
-  "Renewable Energy",
-  "Autonomous Driving",
-  "Computer Vision",
-  "Neuroscience",
-  "Virology",
-  "Fintech",
-  "V2G",
-  "Edge Computing",
-  "HCI",
-  "Transformers",
-  "NLP",
-  "Robotics",
-  "Bioinformatics",
-  "Microplastics",
+  'LLM',
+  'Agent',
+  'RAG',
+  'Prompt Engineering',
+  'Quantum Computing',
+  'Solid-State Battery',
+  'Renewable Energy',
+  'Autonomous Driving',
+  'Computer Vision',
+  'Neuroscience',
+  'Virology',
+  'Fintech',
+  'V2G',
+  'Edge Computing',
+  'HCI',
+  'Transformers',
+  'NLP',
+  'Robotics',
+  'Bioinformatics',
+  'Microplastics',
 ];
 
 interface Topic {
@@ -70,73 +71,58 @@ export default function DashboardPage() {
   const [originalConfig, setOriginalConfig] = useState<UserConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [aiPrompts, setAiPrompts] = useState<{ [key: number]: string }>({});
   const [recommending, setRecommending] = useState<{ [key: number]: boolean }>(
-    {},
+    {}
   );
 
   const router = useRouter();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        router.push("/login");
-      } else {
-        setUser(user);
-        fetchConfig(user.id);
-      }
-    };
-    checkUser();
-  }, [router]);
-
-  const fetchConfig = async (userId: string) => {
+  const fetchConfig = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("user_config")
-        .select("*")
-        .eq("user_id", userId)
+        .from('user_config')
+        .select('*')
+        .eq('user_id', userId)
         .single();
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error fetching config:", error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching config:', error);
       } else if (data) {
         setConfig(
           data.config || {
             topics: [],
-            schedule: "daily",
-            delivery: "email",
+            schedule: 'daily',
+            delivery: 'email',
             receive_email: true,
-          },
+          }
         );
         setOriginalConfig(
           data.config || {
             topics: [],
-            schedule: "daily",
-            delivery: "email",
+            schedule: 'daily',
+            delivery: 'email',
             receive_email: true,
-          },
+          }
         );
       } else {
         // Default config if none exists
         const defaultCfg = {
           topics: [
             {
-              name: "Default Topic",
+              name: 'Default Topic',
               keywords: [],
-              match_type: "AND",
+              match_type: 'AND',
               filters: {
                 years_limit: 3,
-                min_journal_rank: "Q2",
+                min_journal_rank: 'Q2',
                 min_citations: 5,
               },
             },
           ],
-          schedule: "daily",
-          delivery: "email",
+          schedule: 'daily',
+          delivery: 'email',
           receive_email: true,
         };
         setConfig(defaultCfg);
@@ -145,27 +131,42 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+      } else {
+        setUser(user);
+        fetchConfig(user.id);
+      }
+    };
+    checkUser();
+  }, [router, fetchConfig]);
 
   const handleSave = async () => {
     if (!user || !config) return;
     setSaving(true);
     const { error } = await supabase
-      .from("user_config")
-      .upsert({ user_id: user.id, config: config }, { onConflict: "user_id" });
+      .from('user_config')
+      .upsert({ user_id: user.id, config: config }, { onConflict: 'user_id' });
 
     if (error) {
-      alert("Failed to save configuration: " + error.message);
+      alert(`Failed to save configuration: ${error.message}`);
     } else {
       setOriginalConfig(config);
-      alert("Configuration saved successfully!");
+      alert('Configuration saved successfully!');
     }
     setSaving(false);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push('/login');
   };
 
   const handleRecommendKeywords = async (topicIndex: number) => {
@@ -174,9 +175,9 @@ export default function DashboardPage() {
     if (!prompt) return;
     setRecommending((prev) => ({ ...prev, [topicIndex]: true }));
     try {
-      const res = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topicDescription: prompt }),
       });
       const data = await res.json();
@@ -184,15 +185,15 @@ export default function DashboardPage() {
         const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
         const existing = newConfig.topics[topicIndex].keywords || [];
         const newKeys = data.keywords.filter(
-          (k: string) => !existing.includes(k),
+          (k: string) => !existing.includes(k)
         );
         newConfig.topics[topicIndex].keywords = [...existing, ...newKeys];
         setConfig(newConfig);
       } else {
-        alert(data.error || "Failed to fetch recommendations");
+        alert(data.error || 'Failed to fetch recommendations');
       }
-    } catch (e: any) {
-      alert("Error fetching recommendations");
+    } catch {
+      alert('Error fetching recommendations');
     }
     setRecommending((prev) => ({ ...prev, [topicIndex]: false }));
   };
@@ -200,16 +201,17 @@ export default function DashboardPage() {
   const updateTopicStringField = (
     topicIndex: number,
     field: keyof Topic,
-    value: string,
+    value: string
   ) => {
     if (!config) return;
     const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
-    (newConfig.topics[topicIndex] as any)[field] = value;
+    (newConfig.topics[topicIndex] as unknown as Record<string, string>)[field] =
+      value;
     setConfig(newConfig);
   };
 
   const addKeyword = (topicIndex: number, keyword: string) => {
-    if (!config || !keyword || !keyword.trim()) return;
+    if (!config || !keyword?.trim()) return;
     const trimmed = keyword.trim();
     const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
     if (!newConfig.topics[topicIndex].keywords.includes(trimmed)) {
@@ -230,16 +232,25 @@ export default function DashboardPage() {
     setConfig(newConfig);
   };
 
-  const updateFilter = (topicIndex: number, field: string, value: any) => {
+  const updateFilter = (
+    topicIndex: number,
+    field: string,
+    value: string | number
+  ) => {
     if (!config) return;
     const newConfig = JSON.parse(JSON.stringify(config)) as UserConfig;
     // Handle numeric values
     let finalValue = value;
-    if (field === "years_limit" || field === "min_citations") {
-      finalValue = parseInt(value);
-      if (isNaN(finalValue)) finalValue = 0;
+    if (field === 'years_limit' || field === 'min_citations') {
+      finalValue = parseInt(String(value), 10);
+      if (Number.isNaN(finalValue)) finalValue = 0;
     }
-    (newConfig.topics[topicIndex].filters as any)[field] = finalValue;
+    (
+      newConfig.topics[topicIndex].filters as unknown as Record<
+        string,
+        number | string
+      >
+    )[field] = finalValue;
     setConfig(newConfig);
   };
 
@@ -250,7 +261,7 @@ export default function DashboardPage() {
           <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-primary animate-spin"></div>
           <div
             className="absolute inset-2 rounded-full border-r-2 border-l-2 border-primary/40 animate-spin"
-            style={{ animationDirection: "reverse", animationDuration: "1s" }}
+            style={{ animationDirection: 'reverse', animationDuration: '1s' }}
           ></div>
         </div>
         <p className="text-sm font-medium text-muted-foreground animate-pulse tracking-wide">
@@ -324,7 +335,7 @@ export default function DashboardPage() {
                     }
                   />
                   <span className="text-sm font-medium">
-                    {config.receive_email !== false ? "On" : "Off"}
+                    {config.receive_email !== false ? 'On' : 'Off'}
                   </span>
                 </div>
               </div>
@@ -352,9 +363,9 @@ export default function DashboardPage() {
                       Search Mode:
                     </Label>
                     <Select
-                      value={topic.match_type || "AND"}
+                      value={topic.match_type || 'AND'}
                       onValueChange={(val) =>
-                        updateTopicStringField(tIdx, "match_type", val || "")
+                        updateTopicStringField(tIdx, 'match_type', val || '')
                       }
                     >
                       <SelectTrigger className="w-[160px] md:w-[200px] h-9">
@@ -376,6 +387,7 @@ export default function DashboardPage() {
                     >
                       {kw}
                       <button
+                        type="button"
                         onClick={() => removeKeyword(tIdx, kIdx)}
                         className="ml-2 hover:text-destructive"
                       >
@@ -391,9 +403,9 @@ export default function DashboardPage() {
                     id={`kw-input-${tIdx}`}
                     placeholder="Type keyword and press Enter..."
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") {
+                      if (e.key === 'Enter') {
                         addKeyword(tIdx, (e.target as HTMLInputElement).value);
-                        (e.target as HTMLInputElement).value = "";
+                        (e.target as HTMLInputElement).value = '';
                       }
                     }}
                   />
@@ -402,11 +414,11 @@ export default function DashboardPage() {
                     size="icon"
                     onClick={() => {
                       const input = document.getElementById(
-                        `kw-input-${tIdx}`,
+                        `kw-input-${tIdx}`
                       ) as HTMLInputElement;
                       if (input) {
                         addKeyword(tIdx, input.value);
-                        input.value = "";
+                        input.value = '';
                       }
                     }}
                   >
@@ -418,7 +430,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col md:flex-row gap-2 md:items-center bg-muted/50 p-3 rounded-md border border-dashed">
                   <Input
                     placeholder="Describe topic for AI to suggest keywords... (e.g. LLM in Healthcare)"
-                    value={aiPrompts[tIdx] || ""}
+                    value={aiPrompts[tIdx] || ''}
                     onChange={(e) =>
                       setAiPrompts((prev) => ({
                         ...prev,
@@ -434,7 +446,7 @@ export default function DashboardPage() {
                     className="w-full md:w-auto shrink-0"
                   >
                     <Sparkles className="w-4 h-4 mr-2 text-primary" />
-                    {recommending[tIdx] ? "Thinking..." : "AI Recommend"}
+                    {recommending[tIdx] ? 'Thinking...' : 'AI Recommend'}
                   </Button>
                 </div>
 
@@ -448,10 +460,11 @@ export default function DashboardPage() {
                       const isActive = topic.keywords.includes(preset);
                       return (
                         <button
+                          type="button"
                           key={pIdx}
                           disabled={isActive}
                           onClick={() => addKeyword(tIdx, preset)}
-                          className={`text-xs px-2 py-1 border rounded-md transition-colors ${isActive ? "bg-primary/20 border-primary/30 text-primary opacity-50 cursor-not-allowed" : "bg-background hover:bg-muted text-muted-foreground"}`}
+                          className={`text-xs px-2 py-1 border rounded-md transition-colors ${isActive ? 'bg-primary/20 border-primary/30 text-primary opacity-50 cursor-not-allowed' : 'bg-background hover:bg-muted text-muted-foreground'}`}
                         >
                           {preset}
                         </button>
@@ -469,7 +482,7 @@ export default function DashboardPage() {
                     type="number"
                     value={topic.filters.years_limit}
                     onChange={(e) =>
-                      updateFilter(tIdx, "years_limit", e.target.value)
+                      updateFilter(tIdx, 'years_limit', e.target.value)
                     }
                   />
                 </div>
@@ -478,7 +491,7 @@ export default function DashboardPage() {
                   <Select
                     value={topic.filters.min_journal_rank}
                     onValueChange={(val) =>
-                      updateFilter(tIdx, "min_journal_rank", val || "")
+                      updateFilter(tIdx, 'min_journal_rank', val || '')
                     }
                   >
                     <SelectTrigger className="w-full">
@@ -498,7 +511,7 @@ export default function DashboardPage() {
                     type="number"
                     value={topic.filters.min_citations}
                     onChange={(e) =>
-                      updateFilter(tIdx, "min_citations", e.target.value)
+                      updateFilter(tIdx, 'min_citations', e.target.value)
                     }
                   />
                 </div>
@@ -513,14 +526,14 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="hidden md:flex flex-col">
             <p
-              className={`font-semibold transition-colors duration-300 ${hasChanges ? "text-primary" : "text-muted-foreground"}`}
+              className={`font-semibold transition-colors duration-300 ${hasChanges ? 'text-primary' : 'text-muted-foreground'}`}
             >
-              {hasChanges ? "You have unsaved changes" : "All changes saved"}
+              {hasChanges ? 'You have unsaved changes' : 'All changes saved'}
             </p>
             <p className="text-sm text-muted-foreground">
               {hasChanges
-                ? "Please save your configuration to apply."
-                : "Your settings are up to date."}
+                ? 'Please save your configuration to apply.'
+                : 'Your settings are up to date.'}
             </p>
           </div>
           <div className="w-full md:w-auto flex justify-center md:justify-end">
@@ -530,13 +543,13 @@ export default function DashboardPage() {
               size="lg"
               className={`w-full md:w-auto transition-all duration-500 relative overflow-hidden ${
                 hasChanges
-                  ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(79,70,229,0.5)] ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
-                  : "bg-muted/50 text-muted-foreground border border-dashed border-muted-foreground/30"
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(79,70,229,0.5)] ring-2 ring-primary/50 ring-offset-2 ring-offset-background'
+                  : 'bg-muted/50 text-muted-foreground border border-dashed border-muted-foreground/30'
               }`}
             >
               <Save className="w-5 h-5 mr-2 relative z-10" />
               <span className="relative z-10 font-bold">
-                {saving ? "Saving..." : hasChanges ? "Save Changes!" : "Saved"}
+                {saving ? 'Saving...' : hasChanges ? 'Save Changes!' : 'Saved'}
               </span>
             </Button>
           </div>
