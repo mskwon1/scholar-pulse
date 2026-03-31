@@ -1,9 +1,15 @@
+'use client';
+
+import { useAtomValue } from 'jotai';
 import { ArrowRight, BookOpen, Mail, Search, Shield, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { userAtom } from '@/lib/store';
 
 export default function Home() {
+  const user = useAtomValue(userAtom);
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground dark">
       {/* Navigation */}
@@ -20,19 +26,30 @@ export default function Home() {
             Scholar Pulse
           </span>
         </Link>
-        <nav className="ml-auto flex gap-4 sm:gap-6">
-          <Link
-            className="text-sm font-medium hover:underline underline-offset-4"
-            href="/login"
-          >
-            Login
-          </Link>
-          <Link
-            className="text-sm font-medium hover:underline underline-offset-4"
-            href="/signup"
-          >
-            Sign Up
-          </Link>
+        <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
+          {user ? (
+            <Link
+              className="text-sm font-medium hover:underline underline-offset-4"
+              href="/dashboard"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                className="text-sm font-medium hover:underline underline-offset-4"
+                href="/login"
+              >
+                Login
+              </Link>
+              <Link
+                className="text-sm font-medium hover:underline underline-offset-4"
+                href="/signup"
+              >
+                Sign Up
+              </Link>
+            </>
+          )}
         </nav>
       </header>
 
@@ -54,16 +71,26 @@ export default function Home() {
                 </p>
               </div>
               <div className="space-x-4">
-                <Link href="/signup">
-                  <Button size="lg" className="px-8">
-                    Get Started <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button variant="outline" size="lg" className="px-8">
-                    View Demo
-                  </Button>
-                </Link>
+                {user ? (
+                  <Link href="/dashboard">
+                    <Button size="lg" className="px-8">
+                      Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                ) : (
+                  <>
+                    <Link href="/signup">
+                      <Button size="lg" className="px-8">
+                        Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Link href="/login">
+                      <Button variant="outline" size="lg" className="px-8">
+                        Login
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>
