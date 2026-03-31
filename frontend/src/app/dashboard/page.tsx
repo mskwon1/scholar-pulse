@@ -178,7 +178,17 @@ export default function DashboardPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen -mt-20 space-y-4">
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-t-2 border-b-2 border-primary animate-spin"></div>
+          <div className="absolute inset-2 rounded-full border-r-2 border-l-2 border-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+        </div>
+        <p className="text-sm font-medium text-muted-foreground animate-pulse tracking-wide">
+          Syncing your insights...
+        </p>
+      </div>
+    );
   }
 
   return (
