@@ -6,9 +6,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { userAtom } from '@/lib/store';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const user = useAtomValue(userAtom);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground dark">
@@ -27,7 +34,12 @@ export default function Home() {
           </span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6 items-center">
-          {user ? (
+          {!mounted ? (
+            <div className="flex gap-4">
+              <div className="w-10 h-5 bg-muted rounded animate-pulse" />
+              <div className="w-14 h-5 bg-muted rounded animate-pulse" />
+            </div>
+          ) : user ? (
             <Link
               className="text-sm font-medium hover:underline underline-offset-4"
               href="/dashboard"
@@ -71,7 +83,12 @@ export default function Home() {
                 </p>
               </div>
               <div className="space-x-4">
-                {user ? (
+                {!mounted ? (
+                  <div className="flex justify-center gap-4">
+                    <div className="w-[180px] h-11 bg-muted rounded-md animate-pulse" />
+                    <div className="w-[120px] h-11 bg-muted rounded-md animate-pulse" />
+                  </div>
+                ) : user ? (
                   <Link href="/dashboard">
                     <Button size="lg" className="px-8">
                       Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
