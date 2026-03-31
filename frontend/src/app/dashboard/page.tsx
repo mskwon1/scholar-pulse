@@ -40,6 +40,7 @@ interface UserConfig {
 
 export default function DashboardPage() {
   const [config, setConfig] = useState<UserConfig | null>(null);
+  const [originalConfig, setOriginalConfig] = useState<UserConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -73,9 +74,10 @@ export default function DashboardPage() {
         console.error('Error fetching config:', error);
       } else if (data) {
         setConfig(data.config || { topics: [], schedule: 'daily', delivery: 'email', receive_email: true });
+        setOriginalConfig(data.config || { topics: [], schedule: 'daily', delivery: 'email', receive_email: true });
       } else {
         // Default config if none exists
-        setConfig({
+        const defaultCfg = {
           topics: [
             {
               name: "Default Topic",
@@ -87,7 +89,9 @@ export default function DashboardPage() {
           schedule: "daily",
           delivery: "email",
           receive_email: true
-        });
+        };
+        setConfig(defaultCfg);
+        setOriginalConfig(defaultCfg);
       }
     } finally {
       setLoading(false);
@@ -104,6 +108,7 @@ export default function DashboardPage() {
     if (error) {
       alert('Failed to save configuration: ' + error.message);
     } else {
+      setOriginalConfig(config);
       alert('Configuration saved successfully!');
     }
     setSaving(false);
@@ -194,8 +199,10 @@ export default function DashboardPage() {
     );
   }
 
+  const hasChanges = JSON.stringify(config) !== JSON.stringify(originalConfig);
+
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-8 dark">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8 pb-32 dark">
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 md:gap-4">
           <div className="flex items-center gap-3">
@@ -204,10 +211,6 @@ export default function DashboardPage() {
             <span className="text-xl md:text-2xl font-medium text-muted-foreground tracking-tight hidden sm:inline-block">Dashboard</span>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
-            <Button onClick={handleSave} disabled={saving} className="flex-1 md:flex-none">
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
             <Button variant="outline" onClick={handleLogout} className="flex-1 md:flex-none">
               <LogOut className="w-4 h-4 mr-2" />
               Logout
@@ -375,6 +378,35 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Fixed Footer Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-4 bg-background/95 backdrop-blur-md border-t border-border/40 shadow-[0_-4px_15px_rgba(0,0,0,0.1)] transition-all duration-300">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="hidden md:flex flex-col">
+            <p className={`font-semibold transition-colors duration-300 ${hasChanges ? 'text-primary' : 'text-muted-foreground'}`}>
+              {hasChanges ? 'You have unsaved changes' : 'All changes saved'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {hasChanges ? 'Please save your configuration to apply.' : 'Your settings are up to date.'}
+            </p>
+          </div>
+          <div className="w-full md:w-auto flex justify-center md:justify-end">
+            <Button 
+              onClick={handleSave} 
+              disabled={saving || !hasChanges} 
+              size="lg" 
+              className={`w-full md:w-auto transition-all duration-500 relative overflow-hidden ${
+                hasChanges 
+                  ? 'bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_20px_rgba(79,70,229,0.5)] ring-2 ring-primary/50 ring-offset-2 ring-offset-background' 
+                  : 'bg-muted/50 text-muted-foreground border border-dashed border-muted-foreground/30'
+              }`}
+            >
+              <Save className="w-5 h-5 mr-2 relative z-10" />
+              <span className="relative z-10 font-bold">{saving ? 'Saving...' : hasChanges ? 'Save Changes!' : 'Saved'}</span>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
