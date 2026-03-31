@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation } from '@tanstack/react-query';
-import { Lock, Mail } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { Button } from '@/components/ui/button';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { Lock, Mail } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,14 +15,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { supabase } from '@/lib/supabase';
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -30,7 +30,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const message = searchParams.get('message');
+  const message = searchParams.get("message");
 
   const {
     register,
@@ -38,7 +38,7 @@ function LoginForm() {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: "", password: "" },
   });
 
   const loginMutation = useMutation({
@@ -51,7 +51,7 @@ function LoginForm() {
       return authData;
     },
     onSuccess: () => {
-      router.push('/dashboard');
+      router.push("/dashboard");
     },
   });
 
@@ -59,8 +59,8 @@ function LoginForm() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
-        router.push('/dashboard');
+      if (event === "SIGNED_IN" || event === "PASSWORD_RECOVERY") {
+        router.push("/dashboard");
       }
     });
 
@@ -90,7 +90,7 @@ function LoginForm() {
                 <Input
                   id="email"
                   type="email"
-                  {...register('email')}
+                  {...register("email")}
                   placeholder="name@example.com"
                   className="pl-9"
                 />
@@ -108,7 +108,7 @@ function LoginForm() {
                 <Input
                   id="password"
                   type="password"
-                  {...register('password')}
+                  {...register("password")}
                   className="pl-9"
                   placeholder="••••••••"
                 />
@@ -131,18 +131,18 @@ function LoginForm() {
             className="w-full"
             disabled={loginMutation.isPending}
           >
-            {loginMutation.isPending ? 'Logging in...' : 'Login'}
+            {loginMutation.isPending ? "Logging in..." : "Login"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-2 justify-center">
         <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
+          Don&apos;t have an account?{" "}
           <Button
             type="button"
             variant="link"
             className="p-0"
-            onClick={() => router.push('/signup')}
+            onClick={() => router.push("/signup")}
           >
             Sign Up
           </Button>
@@ -151,7 +151,7 @@ function LoginForm() {
           type="button"
           variant="link"
           size="sm"
-          onClick={() => router.push('/')}
+          onClick={() => router.push("/")}
         >
           Back to Home
         </Button>

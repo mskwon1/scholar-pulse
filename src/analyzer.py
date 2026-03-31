@@ -9,12 +9,20 @@ logger = get_logger(__name__)
 
 # System prompt for analysis
 SYSTEM_PROMPT = """
-You are an expert academic research assistant. Your task is to analyze a paper's title and abstract and provide a concise summary.
-Follow these rules:
+You are an expert academic research assistant. Your task is to analyze a batch of academic papers (provided as a JSON array) and provide concise summaries for each.
+For EACH paper, apply these rules:
 1. Provide a 3-line summary: Background, Methodology, and Key Results.
 2. Identify the Novelty & Impact of the research (what makes it unique compared to existing work).
 3. Extract 3-5 relevant academic keywords.
-4. Output the result in JSON format with keys: "summary", "novelty", "impact", "keywords".
+4. Output MUST be a JSON array of objects. Each object must contain:
+{
+  "id": "original paper id",
+  "summary": "...",
+  "novelty": "...",
+  "impact": "...",
+  "keywords": ["..."]
+}
+Return ONLY the JSON array.
 """
 
 class Analyzer:
@@ -27,40 +35,59 @@ class Analyzer:
             self.client = genai.Client(api_key=self.api_key)
 
     def analyze_papers(self, papers: List[Paper]) -> List[Paper]:
-        """Analyzes a list of papers using Gemini."""
-        if not self.client:
+        """Analyzes a list of papers using batched Gemini requests to save API quotas."""
+        if not self.client or not papers:
             return papers
             
         analyzed_papers = []
-        for paper in papers:
-            logger.info(f"Analyzing paper: {paper.title}")
-            analysis = self._analyze_one(paper)
-            if analysis:
-                paper.summary = analysis.get("summary")
-                paper.novelty = analysis.get("novelty")
-                paper.impact = analysis.get("impact")
-                paper.keywords = analysis.get("keywords", [])
-            analyzed_papers.append(paper)
-            
-        return analyzed_papers
-
-    def _analyze_one(self, paper: Paper) -> Optional[dict]:
-        """Analyzes a single paper using Gemini."""
-        input_data = f"Title: {paper.title}\nAbstract: {paper.abstract or 'N/A'}"
+        batch_size = 10  # Analyze 10 papers per single Gemini API call
         
-        try:
-            response = self.client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=[input_data],
-                config={
-                    'system_instruction': SYSTEM_PROMPT,
-                    'response_mime_type': 'application/json'
-                }
-            )
+        for i in range(0, len(papers), batch_size):
+            batch = papers[i:i + batch_size]
+            logger.info(f"Analyzing batch of {len(batch)} papers...")
             
-            if response.text:
-                return json.loads(response.text)
-            return None
-        except Exception as e:
-            logger.error(f"Error analyzing paper '{paper.title}': {e}")
-            return None
+            # Prepare the JSON input block for this batch
+            input_payload = [
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "abstract": p.abstract or "N/A"
+                }
+                for p in batch
+            ]
+            
+            try:
+                # Switched to the more generous text output model: gemini-2.5-flash-lite
+                response = self.client.models.generate_content(
+                    model='gemini-2.5-flash-lite',
+                    contents=[json.dumps(input_payload)],
+                    config={
+                        'system_instruction': SYSTEM_PROMPT,
+                        'response_mime_type': 'application/json'
+                    }
+                )
+                
+                if response.text:
+                    results = json.loads(response.text)
+                    if isinstance(results, list):
+                        # Map results back to papers using the provided 'id'
+                        result_map = {res.get("id"): res for res in results if res.get("id")}
+                        for paper in batch:
+                            res = result_map.get(paper.id)
+                            if res:
+                                paper.summary = res.get("summary")
+                                paper.novelty = res.get("novelty")
+                                paper.impact = res.get("impact")
+                                paper.keywords = res.get("keywords", [])
+                            analyzed_papers.append(paper)
+                    else:
+                        logger.error("Gemini returned non-array JSON for batched response. Falling back to unanalyzed papers.")
+                        analyzed_papers.extend(batch)
+                else:
+                    analyzed_papers.extend(batch)
+
+            except Exception as e:
+                logger.error(f"Error analyzing batch: {e}")
+                analyzed_papers.extend(batch)
+                
+        return analyzed_papers
