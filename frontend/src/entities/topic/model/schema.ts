@@ -6,14 +6,15 @@ export const topicSchema = z.object({
   match_type: z.string().optional(),
   category: z.string().optional(),
   filters: z.object({
-    years_limit: z.number().min(1, "Must be at least 1 year"),
+    years_limit: z.number({ invalid_type_error: "Limit cannot be empty" }).min(1, "Must be at least 1 year"),
     min_journal_rank: z.string(),
-    min_citations: z.number().min(0, "Citations cannot be negative"),
+    min_citations: z.number({ invalid_type_error: "Cannot be empty" }).min(0, "Citations cannot be negative"),
   }),
 });
 
 export const userConfigSchema = z.object({
   topics: z.array(topicSchema).max(5, { message: "Maximum 5 filters allowed" }),
+  delivery_topic_index: z.number(),
   schedule: z.string(),
   delivery: z.string(),
   receive_email: z.boolean(),

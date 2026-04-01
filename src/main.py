@@ -31,7 +31,10 @@ def run_agent():
     for user_id, config in user_configs:
         if not getattr(config, 'receive_email', True):
             continue
-        for topic in config.topics:
+        
+        active_idx = getattr(config, 'delivery_topic_index', 0)
+        topics_to_process = [config.topics[active_idx]] if getattr(config, 'topics', None) and 0 <= active_idx < len(config.topics) else []
+        for topic in topics_to_process:
             topic_key = f"{','.join(topic.keywords)}|{topic.match_type}|{topic.filters.min_citations}|{topic.filters.min_journal_rank}"
             if topic_key not in unique_topics:
                 unique_topics[topic_key] = topic
@@ -40,7 +43,7 @@ def run_agent():
         logger.info("No active topics found across all users.")
         sys.exit(0)
     
-    logger.info(f"Aggregator: Found {len(unique_topics)} unique topic queries to process.")
+    logger.info(f"Aggregator: Found {len(unique_topics)} unique active topic queries to process.")
 
     # 3. Phase 2: Fetch, Filter, and Cache
     topic_paper_map = {} # Maps topic_key -> list of Paper IDs that passed filter
@@ -73,8 +76,11 @@ def run_agent():
             continue
             
         all_selected_papers = []
+        # Selection respects the single active delivery topic
+        active_idx = getattr(config, 'delivery_topic_index', 0)
+        topics_to_process = [config.topics[active_idx]] if getattr(config, 'topics', None) and 0 <= active_idx < len(config.topics) else []
         
-        for topic in config.topics:
+        for topic in topics_to_process:
             topic_key = f"{','.join(topic.keywords)}|{topic.match_type}|{topic.filters.min_citations}|{topic.filters.min_journal_rank}"
             matched_ids = topic_paper_map.get(topic_key, [])
             

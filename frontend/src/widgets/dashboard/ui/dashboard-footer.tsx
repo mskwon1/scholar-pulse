@@ -15,6 +15,16 @@ export function DashboardFooter({ isSaving, onSubmit }: DashboardFooterProps) {
   const { errors } = useFormState<UserConfig>();
   
   const hasErrors = Object.keys(errors).length > 0;
+  
+  let errorMessage = "Please fix the validation errors above before saving.";
+  if (errors.topics && Array.isArray(errors.topics)) {
+    const errorIndices = errors.topics
+      .map((err, idx) => (err ? idx + 1 : null))
+      .filter((idx) => idx !== null);
+    if (errorIndices.length > 0) {
+      errorMessage = `Validation error in Filter ${errorIndices.join(', ')}`;
+    }
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t shadow-2xl z-50 animate-in slide-in-from-bottom-8">
@@ -22,7 +32,7 @@ export function DashboardFooter({ isSaving, onSubmit }: DashboardFooterProps) {
         <p className="text-sm font-medium text-muted-foreground flex items-center">
             {hasErrors ? (
               <span className="text-destructive font-semibold flex items-center bg-destructive/10 px-3 py-1.5 rounded-full">
-                Please fix the validation errors above before saving.
+                {errorMessage}
               </span>
             ) : (
                 "Unsaved changes will be lost if you leave this page."

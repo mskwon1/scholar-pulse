@@ -8,7 +8,9 @@ import { UserConfig } from '@/entities/topic/model/schema';
 
 export function DeliverySettingsCard() {
   const { control, watch } = useFormContext<UserConfig>();
-  const topicsLength = watch('topics')?.length || 0;
+  const topics = watch('topics') || [];
+  const deliveryIndex = watch('delivery_topic_index') || 0;
+  const activeFilterName = topics[deliveryIndex]?.name || 'Not Selected';
 
   return (
     <Card className="border-primary/10 bg-card/50 backdrop-blur-sm">
@@ -21,7 +23,7 @@ export function DeliverySettingsCard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground max-w-[600px] leading-relaxed">
-              Get an AI-curated summary of the latest papers matching your <strong className="text-foreground">{topicsLength} active filters</strong>. 
+              Get an AI-curated summary of the latest papers matching your <strong className="text-foreground">active filter: {activeFilterName}</strong>. 
               Emails are processed and sent daily at <span className="font-semibold text-primary">9:00 AM (KST)</span>.
             </p>
           </div>

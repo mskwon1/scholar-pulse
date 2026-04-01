@@ -14,13 +14,15 @@ import { useTopicManager } from '@/features/topic-manager/model/use-topic-manage
 interface TopicDetailCardProps {
   activeTopicIndex: number;
   setActiveTopicIndex: (index: number) => void;
+  topicManager: ReturnType<typeof useTopicManager>;
 }
 
-export function TopicDetailCard({ activeTopicIndex, setActiveTopicIndex }: TopicDetailCardProps) {
+export function TopicDetailCard({ activeTopicIndex, topicManager }: TopicDetailCardProps) {
   const { control, watch, register, setValue, formState: { errors } } = useFormContext<UserConfig>();
   
   const { 
     topics, 
+    fields,
     addKeyword, 
     removeKeyword, 
     handleRecommendKeywords, 
@@ -29,7 +31,7 @@ export function TopicDetailCard({ activeTopicIndex, setActiveTopicIndex }: Topic
     setAiPrompts, 
     recommending,
     addTopic
-  } = useTopicManager(activeTopicIndex, setActiveTopicIndex);
+  } = topicManager;
 
   const currentTopicKeywords = activeTopicIndex >= 0 ? (watch(`topics.${activeTopicIndex}.keywords`) || []) : [];
 
@@ -43,7 +45,7 @@ export function TopicDetailCard({ activeTopicIndex, setActiveTopicIndex }: Topic
           <CardDescription className="mb-8 text-base max-w-md text-center leading-relaxed">
             You haven&apos;t selected a filter to view. Select an existing one from the menu or define a new research query to get tracking.
           </CardDescription>
-          {topics.length < 5 && (
+          {fields.length < 5 && (
             <Button type="button" size="lg" onClick={addTopic} className="shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-8 h-12 text-base font-semibold">
               <Plus className="w-5 h-5 mr-2" /> Create First Filter
             </Button>
@@ -53,22 +55,39 @@ export function TopicDetailCard({ activeTopicIndex, setActiveTopicIndex }: Topic
   }
 
   return (
-    <Card className="shadow-sm border-primary/20 bg-card overflow-hidden">
+    <Card key={fields[activeTopicIndex]?.id || 'empty_detail_card'} className="shadow-sm border-primary/20 bg-card overflow-hidden">
       <div className="h-1 bg-gradient-to-r from-primary/40 via-primary to-primary/40 w-full" />
       <CardHeader className="flex flex-col sm:flex-row sm:items-start justify-between pb-6 border-b gap-4">
           <div>
             <CardTitle className="text-2xl font-bold tracking-tight">Filter Settings</CardTitle>
             <CardDescription className="text-base mt-1">Configure focus domain and tracking keywords.</CardDescription>
           </div>
-          <Button 
-            type="button" 
-            variant="ghost" 
-            size="sm"
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 self-start w-full sm:w-auto"
-            onClick={() => confirmRemoveTopic(activeTopicIndex)}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Delete Filter
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 shrink-0 self-start w-full sm:w-auto">
+            {watch('delivery_topic_index') !== activeTopicIndex ? (
+               <Button 
+                 type="button" 
+                 variant="outline" 
+                 size="sm"
+                 className="text-muted-foreground border-dashed border-muted-foreground/40 flex-1 sm:flex-none hover:bg-primary/5 hover:text-primary hover:border-primary/50 flex items-center font-medium transition-all"
+                 onClick={() => setValue('delivery_topic_index', activeTopicIndex, { shouldDirty: true })}
+               >
+                 <Sparkles className="w-4 h-4 mr-1.5" /> Set as Active Default
+               </Button>
+            ) : (
+               <div className="flex items-center justify-center px-4 py-1.5 bg-primary text-primary-foreground rounded-md shadow-md border border-primary text-sm font-semibold flex-1 sm:flex-none">
+                 <Sparkles className="w-4 h-4 mr-1.5 fill-current" /> Active Delivery Filter
+               </div>
+            )}
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-1 sm:flex-none"
+              onClick={() => confirmRemoveTopic(activeTopicIndex)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Filter
+            </Button>
+          </div>
       </CardHeader>
       <CardContent className="space-y-8 pt-8">
           

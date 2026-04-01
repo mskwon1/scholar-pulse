@@ -8,14 +8,16 @@ export function useTopicManager(
   activeTopicIndex: number,
   setActiveTopicIndex: (index: number) => void
 ) {
-  const { control, getValues, setValue } = useFormContext<UserConfig>();
+  const { watch, getValues, setValue, control } = useFormContext<UserConfig>();
   const [aiPrompts, setAiPrompts] = useAtom(aiPromptsAtom);
   const [recommending, setRecommending] = useAtom(recommendingAtom);
 
-  const { fields: topics, append, remove } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control,
     name: 'topics',
   });
+
+  const topics = watch('topics') || [];
 
   const handleRecommendKeywords = async (topicIndex: number) => {
     const prompt = aiPrompts[topicIndex];
@@ -90,29 +92,46 @@ export function useTopicManager(
   };
 
   const addTopic = () => {
-     if (topics.length >= 5) {
+     if (fields.length >= 5) {
         toast.error('Maximum 5 filters allowed.');
         return;
      }
+     
      append({
-        name: `New Filter ${topics.length + 1}`,
-        keywords: [],
-        match_type: 'AND',
-        category: 'All Fields',
-        filters: { years_limit: 3, min_journal_rank: 'Q2', min_citations: 5 }
+       name: `New Filter ${fields.length + 1}`,
+       keywords: [],
+       match_type: 'AND',
+       category: 'All Fields',
+       filters: { years_limit: 3, min_journal_rank: 'Q2', min_citations: 5 }
      });
-     setActiveTopicIndex(topics.length);
+     setActiveTopicIndex(fields.length);
   };
 
   const confirmRemoveTopic = (index: number) => {
-      if (window.confirm("Are you sure you want to delete this filter?")) {
-         remove(index);
-         if (index > 0) setActiveTopicIndex(index - 1);
+      const currentDeliveryIndex = getValues('delivery_topic_index') || 0;
+      if (index === currentDeliveryIndex) {
+         setValue('delivery_topic_index', 0, { shouldDirty: true });
+      } else if (index < currentDeliveryIndex) {
+         setValue('delivery_topic_index', currentDeliveryIndex - 1, { shouldDirty: true });
       }
+      
+      remove(index);
+      
+      setTimeout(() => {
+         const remaining = fields.length - 1;
+         if (remaining <= 0) {
+            setActiveTopicIndex(-1);
+         } else if (index >= remaining) {
+            setActiveTopicIndex(remaining - 1);
+         } else {
+            setActiveTopicIndex(index);
+         }
+      }, 0);
   };
   
   return {
     topics,
+    fields,
     addKeyword,
     removeKeyword,
     handleRecommendKeywords,

@@ -15,6 +15,28 @@ import { DeliverySettingsCard } from '@/widgets/dashboard/ui/delivery-settings-c
 import { TopicSidebar } from '@/widgets/dashboard/ui/topic-sidebar';
 import { TopicDetailCard } from '@/widgets/dashboard/ui/topic-detail-card';
 import { DashboardFooter } from '@/widgets/dashboard/ui/dashboard-footer';
+import { useTopicManager } from '@/features/topic-manager/model/use-topic-manager';
+
+function DashboardContent({ activeTopicIndex, setActiveTopicIndex }: { activeTopicIndex: number, setActiveTopicIndex: (i: number) => void }) {
+  const topicManager = useTopicManager(activeTopicIndex, setActiveTopicIndex);
+  
+  return (
+    <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <TopicSidebar 
+        activeTopicIndex={activeTopicIndex} 
+        setActiveTopicIndex={setActiveTopicIndex} 
+        topicManager={topicManager}
+      />
+      <div className="flex-1 w-full shrink min-w-0">
+        <TopicDetailCard 
+          activeTopicIndex={activeTopicIndex} 
+          setActiveTopicIndex={setActiveTopicIndex} 
+          topicManager={topicManager}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function DashboardView() {
   const router = useRouter();
@@ -34,12 +56,13 @@ export function DashboardView() {
 
   const methods = useForm<UserConfig>({
     resolver: zodResolver(userConfigSchema),
-    defaultValues: config || {
+    defaultValues: (config ? { delivery_topic_index: 0, ...config } : {
       topics: [],
+      delivery_topic_index: 0,
       schedule: 'daily',
       delivery: 'email',
       receive_email: true,
-    },
+    }) as UserConfig,
     mode: 'onChange',
   });
 
@@ -80,16 +103,10 @@ export function DashboardView() {
             <DeliverySettingsCard />
 
             <div className="flex flex-col lg:flex-row gap-8 items-start">
-              <TopicSidebar 
-                activeTopicIndex={activeTopicIndex} 
-                setActiveTopicIndex={setActiveTopicIndex} 
+              <DashboardContent 
+                activeTopicIndex={activeTopicIndex}
+                setActiveTopicIndex={setActiveTopicIndex}
               />
-              <div className="flex-1 w-full shrink min-w-0">
-                <TopicDetailCard 
-                  activeTopicIndex={activeTopicIndex} 
-                  setActiveTopicIndex={setActiveTopicIndex} 
-                />
-              </div>
             </div>
           </main>
 

@@ -16,6 +16,7 @@ class Topic(BaseModel):
 
 class UserConfig(BaseModel):
     topics: List[Topic]
+    delivery_topic_index: int = 0
     schedule: str = "daily"
     delivery: str = "email"
     delivery_email: Optional[str] = None
