@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 
 import { queryKeys } from '@/lib/query-keys';
 import { aiPromptsAtom, recommendingAtom, userAtom } from '@/lib/store';
@@ -182,10 +183,10 @@ export default function DashboardPage() {
         });
       }
       reset(savedData);
-      alert('Configuration saved successfully!');
+      toast.success('Configuration saved successfully!');
     },
     onError: (err) => {
-      alert(`Failed to save configuration: ${err.message}`);
+      toast.error(`Failed to save configuration: ${err.message}`);
     },
   });
 
@@ -224,10 +225,10 @@ export default function DashboardPage() {
           }
         );
       } else {
-        alert(data.error || 'Failed to fetch recommendations');
+        toast.error(data.error || 'Failed to fetch recommendations');
       }
     } catch {
-      alert('Error fetching recommendations');
+      toast.error('Error fetching recommendations');
     }
     setRecommending((prev) => ({ ...prev, [topicIndex]: false }));
   };
@@ -361,7 +362,20 @@ export default function DashboardPage() {
                   {/* Keywords Section */}
                   <div className="space-y-4">
                     <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-4">
-                      <Label className="text-lg">Keywords</Label>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-lg">Keywords</Label>
+                        {currentKeywords.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setValue(`topics.${tIdx}.keywords`, [], { shouldDirty: true })}
+                            className="text-muted-foreground hover:text-destructive h-6 px-2 text-xs"
+                          >
+                            Clear All
+                          </Button>
+                        )}
+                      </div>
                       <div className="flex items-center justify-between w-full md:w-auto gap-2">
                         <Label className="text-sm text-muted-foreground shrink-0">
                           Search Mode:
