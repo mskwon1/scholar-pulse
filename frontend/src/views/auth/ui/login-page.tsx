@@ -3,7 +3,7 @@ import { LoginForm } from '@/widgets/auth/ui/login-form';
 
 export function LoginPage() {
   return (
-    <div className="flex items-center justify-center min-h-[100dvh] bg-background text-foreground dark">
+    <div className="flex items-center justify-center min-h-[100dvh] bg-background text-foreground">
       <Suspense
         fallback={
           <div className="flex flex-col items-center justify-center w-full min-h-[50vh] space-y-4">

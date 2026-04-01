@@ -1,50 +1,75 @@
-import { BookOpen, Mail, Zap } from 'lucide-react';
+import { BrainCircuit, Filter, Layers, Mail } from 'lucide-react';
 
 export function HowItWorksSection() {
   return (
-    <section className="w-full py-16 md:py-24 bg-background">
+    <section className="w-full py-24 bg-white border-t border-muted/50">
       <div className="container px-4 md:px-6 mx-auto">
-        <div className="flex flex-col items-center justify-center text-center space-y-4 mb-16">
-          <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">
-            How it Works
+        <div className="flex flex-col items-center justify-center text-center space-y-4 mb-20">
+          <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+            A Better Way to Discover Literature
           </h2>
-          <p className="max-w-[600px] text-muted-foreground md:text-lg">
-            Set it up once, get insights forever.
+          <p className="max-w-[700px] text-muted-foreground md:text-xl">
+            Configure once, and let Scholar Pulse handle the noise. From raw academic feeds to a 3-minute morning read.
           </p>
         </div>
-        <div className="grid gap-8 sm:grid-cols-3 max-w-5xl mx-auto">
-          <div className="flex flex-col items-center text-center space-y-4 relative">
-            <div className="bg-primary/10 p-5 rounded-full text-primary">
-              <BookOpen className="w-8 h-8" />
+
+        <div className="grid gap-12 lg:grid-cols-4 max-w-6xl mx-auto">
+          
+          {/* Step 1 */}
+          <div className="flex flex-col items-center text-center space-y-6 relative group">
+            <div className="hidden lg:block absolute top-10 -right-[4.5rem] w-32 border-t-2 border-dashed border-indigo-200" />
+            <div className="bg-indigo-50 p-6 rounded-2xl text-indigo-600 ring-1 ring-indigo-200 shadow-sm group-hover:scale-110 transition-transform duration-300">
+              <Layers className="w-8 h-8" strokeWidth={1.5} />
             </div>
-            <h3 className="font-semibold text-xl">1. Set Keywords</h3>
-            <p className="text-sm text-muted-foreground">
-              Type natural language or select preset keywords that match
-              your exact research interests.
-            </p>
-          </div>
-          <div className="flex flex-col items-center text-center space-y-4 relative">
-            <div className="hidden sm:block absolute top-10 -right-16 w-32 border-t-2 border-dashed border-border" />
-            <div className="bg-primary/10 p-5 rounded-full text-primary">
-              <Zap className="w-8 h-8" />
+            <div className="space-y-3">
+              <h3 className="font-bold text-xl text-foreground">1. Set Up Topics</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
+                Create up to <strong className="text-foreground">5 custom topics</strong>. Track specific niches without crossing streams.
+              </p>
             </div>
-            <h3 className="font-semibold text-xl">2. AI Analysis</h3>
-            <p className="text-sm text-muted-foreground">
-              Our Gemini-powered engine scans S2 and arXiv, filtering by SJR
-              Q1/Q2 rank to find top-tier papers.
-            </p>
           </div>
-          <div className="flex flex-col items-center text-center space-y-4 relative">
-            <div className="hidden sm:block absolute top-10 -right-16 w-32 border-t-2 border-dashed border-border" />
-            <div className="bg-primary/10 p-5 rounded-full text-primary">
-              <Mail className="w-8 h-8" />
+
+          {/* Step 2 */}
+          <div className="flex flex-col items-center text-center space-y-6 relative group">
+            <div className="hidden lg:block absolute top-10 -right-[4.5rem] w-32 border-t-2 border-dashed border-indigo-200" />
+            <div className="bg-cyan-50 p-6 rounded-2xl text-cyan-600 ring-1 ring-cyan-200 shadow-sm group-hover:scale-110 transition-transform duration-300">
+              <Filter className="w-8 h-8" strokeWidth={1.5} />
             </div>
-            <h3 className="font-semibold text-xl">3. Morning Delivery</h3>
-            <p className="text-sm text-muted-foreground">
-              Wake up to a beautifully formatted daily email with 3-line
-              bullet summaries at 9:00 AM KST.
-            </p>
+            <div className="space-y-3">
+              <h3 className="font-bold text-xl text-foreground">2. Add Keywords</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
+                Equip each topic with up to <strong className="text-foreground">10 keywords</strong>. We search across Semantic Scholar & ArXiv.
+              </p>
+            </div>
           </div>
+
+          {/* Step 3 */}
+          <div className="flex flex-col items-center text-center space-y-6 relative group">
+            <div className="hidden lg:block absolute top-10 -right-[4.5rem] w-32 border-t-2 border-dashed border-indigo-200" />
+            <div className="bg-fuchsia-50 p-6 rounded-2xl text-fuchsia-600 ring-1 ring-fuchsia-200 shadow-sm group-hover:scale-110 transition-transform duration-300">
+              <BrainCircuit className="w-8 h-8" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-3">
+              <h3 className="font-bold text-xl text-foreground">3. Gemini AI Analysis</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
+                We pull new papers natively, apply SJR rank filters, and generate <strong className="text-foreground">3-line summaries</strong> using Gemini 1.5.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="flex flex-col items-center text-center space-y-6 relative group">
+            <div className="bg-emerald-50 p-6 rounded-2xl text-emerald-600 ring-1 ring-emerald-200 shadow-sm group-hover:scale-110 transition-transform duration-300">
+              <Mail className="w-8 h-8" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-3">
+              <h3 className="font-bold text-xl text-foreground">4. Morning Digest</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
+                Receive a daily or weekly <strong className="text-foreground">email report</strong> outlining only the most relevant breakthroughs.
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
     </section>

@@ -6,7 +6,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom } from 'jotai';
 
-import { userAtom } from '@/entities/user/model/store';
+import { userAtom, authLoadingAtom } from '@/entities/user/model/store';
 import { UserConfig, userConfigSchema } from '@/entities/topic/model/schema';
 import { useConfigQuery, useSaveConfigMutation } from '@/features/topic-manager/api/use-topic-api';
 
@@ -18,20 +18,16 @@ import { DashboardFooter } from '@/widgets/dashboard/ui/dashboard-footer';
 
 export function DashboardView() {
   const router = useRouter();
-  const [user, setUser] = useAtom(userAtom);
+  const [user] = useAtom(userAtom);
+  const [authLoading] = useAtom(authLoadingAtom);
   const [activeTopicIndex, setActiveTopicIndex] = useState(0);
 
   // Auth redirect effect
   useEffect(() => {
-    if (!user) {
-      const savedUser = localStorage.getItem('user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      } else {
-        router.push('/login');
-      }
+    if (!authLoading && !user) {
+      router.push('/login');
     }
-  }, [user, router, setUser]);
+  }, [user, authLoading, router]);
 
   const { data: config, isLoading } = useConfigQuery(user);
   const saveMutation = useSaveConfigMutation(user);
@@ -55,7 +51,7 @@ export function DashboardView() {
     }
   }, [config, reset]);
 
-  if (!user || isLoading) {
+  if (authLoading || (!user && !authLoading) || isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="animate-pulse flex flex-col items-center">

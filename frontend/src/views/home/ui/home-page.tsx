@@ -6,7 +6,7 @@ import { HomeHeader } from '@/widgets/home/ui/home-header';
 
 export function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground dark">
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
       <HomeHeader />
 
       <main className="flex-1">
