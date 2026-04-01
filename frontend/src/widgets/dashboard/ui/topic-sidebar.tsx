@@ -2,9 +2,9 @@
 
 import { useFormContext } from 'react-hook-form';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/shared/ui/button';
+import { Label } from '@/shared/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { UserConfig } from '@/entities/topic/model/schema';
 import { useTopicManager } from '@/features/topic-manager/model/use-topic-manager';
 

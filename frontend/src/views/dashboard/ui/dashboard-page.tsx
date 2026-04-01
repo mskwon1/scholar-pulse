@@ -6,7 +6,7 @@ import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom } from 'jotai';
 
-import { userAtom } from '@/lib/store';
+import { userAtom } from '@/entities/user/model/store';
 import { UserConfig, userConfigSchema } from '@/entities/topic/model/schema';
 import { useConfigQuery, useSaveConfigMutation } from '@/features/topic-manager/api/use-topic-api';
 

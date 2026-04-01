@@ -9,10 +9,6 @@ export function AuthListener() {
   const setUser = useSetAtom(userAtom);
 
   useEffect(() => {
-    // Optionally trigger an initial check here if needed, 
-    // but atomWithStorage already triggers initial load.
-    // However, onAuthStateChange fires an INITIAL_SESSION event natively too.
-    
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {

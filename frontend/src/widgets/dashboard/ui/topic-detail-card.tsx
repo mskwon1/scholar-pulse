@@ -2,11 +2,11 @@
 
 import { Controller, useFormContext } from 'react-hook-form';
 import { Trash2, Plus, Sparkles, X, Filter } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { UserConfig } from '@/entities/topic/model/schema';
 import { CATEGORY_OPTIONS, PRESET_KEYWORDS } from '@/shared/config/constants';
 import { useTopicManager } from '@/features/topic-manager/model/use-topic-manager';

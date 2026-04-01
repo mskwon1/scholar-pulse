@@ -2,8 +2,8 @@
 
 import { Controller, useFormContext } from 'react-hook-form';
 import { Settings2 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
+import { Card, CardHeader, CardTitle, CardContent } from '@/shared/ui/card';
+import { Switch } from '@/shared/ui/switch';
 import { UserConfig } from '@/entities/topic/model/schema';
 
 export function DeliverySettingsCard() {

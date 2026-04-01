@@ -1,7 +1,7 @@
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import { UserConfig } from '@/entities/topic/model/schema';
 import { useAtom } from 'jotai';
-import { aiPromptsAtom, recommendingAtom } from '@/lib/store';
+import { aiPromptsAtom, recommendingAtom } from '@/features/topic-manager/model/store';
 import { toast } from 'sonner';
 
 export function useTopicManager(

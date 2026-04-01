@@ -24,8 +24,8 @@ export const metadata: Metadata = {
   },
 };
 
-import { Providers } from '@/components/providers';
-import { Toaster } from '@/components/ui/sonner';
+import { Providers } from '@/app/_providers/providers';
+import { Toaster } from '@/shared/ui/sonner';
 
 export default function RootLayout({
   children,

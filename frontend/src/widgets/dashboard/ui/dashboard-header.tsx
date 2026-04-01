@@ -2,10 +2,10 @@
 
 import Image from 'next/image';
 import { Sparkles, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/lib/supabase';
+import { Button } from '@/shared/ui/button';
+import { supabase } from '@/shared/api/supabase';
 import { useAtom } from 'jotai';
-import { userAtom } from '@/lib/store';
+import { userAtom } from '@/entities/user/model/store';
 import { useRouter } from 'next/navigation';
 
 export function DashboardHeader() {

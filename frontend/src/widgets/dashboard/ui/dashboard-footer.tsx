@@ -2,7 +2,7 @@
 
 import { useFormContext, useFormState } from 'react-hook-form';
 import { Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { UserConfig } from '@/entities/topic/model/schema';
 
 interface DashboardFooterProps {

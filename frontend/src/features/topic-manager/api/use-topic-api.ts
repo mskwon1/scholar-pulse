@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
-import { queryKeys } from '@/lib/query-keys';
+import { supabase } from '@/shared/api/supabase';
+import { queryKeys } from '@/shared/api/query-keys';
 import { User } from '@supabase/auth-js';
 import { UserConfig } from '@/entities/topic/model/schema';
 import { toast } from 'sonner';
