@@ -58,34 +58,12 @@ def run_agent():
         for p in filtered_papers:
             all_raw_papers_dict[p.id] = p
             
-    # Now check which papers need AI analysis
-    all_paper_ids = list(all_raw_papers_dict.keys())
+    # 4. Phase 2: Selection (Identify exactly which papers users will receive)
+    user_distributions = {} # Maps user_id -> list of selected Paper objects
+    selected_papers_across_users = {} # Maps paper.id -> Paper object
     
-    if not all_paper_ids:
-        logger.info("No papers passed the filters across all topics.")
-        sys.exit(0)
-
-    # Get cached papers
-    cached_papers = db.get_cached_papers(all_paper_ids)
-    cached_ids = {p.id for p in cached_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."}
-    
-    papers_to_analyze = [all_raw_papers_dict[pid] for pid in all_paper_ids if pid not in cached_ids]
-    
-    if papers_to_analyze:
-        logger.info(f"[Analysis Phase] Found {len(papers_to_analyze)} new papers needing AI summary.")
-        analyzed_papers = analyzer.analyze_papers(papers_to_analyze)
-        
-        # Save to cache
-        db.save_papers_to_cache(analyzed_papers)
-    else:
-        logger.info("[Analysis Phase] All required papers are already analyzed and in cache.")
-
-    # Re-fetch the fully populated cache so we have everything ready for distribution
-    final_cached_papers = {p.id: p for p in db.get_cached_papers(all_paper_ids)}
-
-    # 4. Phase 3: Distribution
     for user_id, config in user_configs:
-        logger.info(f"--- Processing Distibution for user: {user_id} ---")
+        logger.info(f"--- Processing Selection for user: {user_id} ---")
         if not getattr(config, 'receive_email', True):
             continue
             
@@ -100,8 +78,8 @@ def run_agent():
             topic_key = f"{','.join(topic.keywords)}|{topic.match_type}|{topic.filters.min_citations}|{topic.filters.min_journal_rank}"
             matched_ids = topic_paper_map.get(topic_key, [])
             
-            # Map IDs to actual cached paper objects
-            matched_papers = [final_cached_papers[pid] for pid in matched_ids if pid in final_cached_papers]
+            # Map IDs to actual raw paper objects
+            matched_papers = [all_raw_papers_dict[pid] for pid in matched_ids if pid in all_raw_papers_dict]
             
             # Filter what this user already received
             new_papers = db.filter_user_sent_papers(user_id, matched_papers)
@@ -122,18 +100,59 @@ def run_agent():
             top_papers = sorted(new_papers, key=get_score, reverse=True)[:3]
             all_selected_papers.extend(top_papers)
             
+            for p in top_papers:
+                selected_papers_across_users[p.id] = p
+                
         if all_selected_papers:
-            # Ensure they actually have summaries before sending
-            valid_ai_papers = [p for p in all_selected_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."]
-            
-            if valid_ai_papers:
-                logger.info(f"[Distribution Phase] Sending report with {len(valid_ai_papers)} papers to {delivery_email}")
-                notifier.send_report(valid_ai_papers, delivery_email)
-                db.mark_as_sent(user_id, valid_ai_papers)
-            else:
-                logger.warning(f"All {len(all_selected_papers)} papers failed AI analysis for user {user_id}. Retrying next run.")
+            user_distributions[user_id] = {
+                "email": delivery_email,
+                "papers": all_selected_papers
+            }
         else:
-            logger.info(f"[Distribution Phase] No new papers to report today for user {user_id}.")
+            logger.info(f"[Selection Phase] No new top papers to report today for user {user_id}.")
+
+    # 5. Phase 3: AI Analysis (Only for the actually selected papers)
+    selected_paper_ids = list(selected_papers_across_users.keys())
+    
+    if not selected_paper_ids:
+        logger.info("No papers were selected for distribution across all users.")
+        sys.exit(0)
+
+    # Get cached papers for the selected subset
+    cached_papers = db.get_cached_papers(selected_paper_ids)
+    cached_ids = {p.id for p in cached_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."}
+    
+    papers_to_analyze = [selected_papers_across_users[pid] for pid in selected_paper_ids if pid not in cached_ids]
+    
+    if papers_to_analyze:
+        logger.info(f"[Analysis Phase] Found {len(papers_to_analyze)} selected papers needing AI summary.")
+        analyzed_papers = analyzer.analyze_papers(papers_to_analyze)
+        
+        # Save to cache
+        db.save_papers_to_cache(analyzed_papers)
+    else:
+        logger.info("[Analysis Phase] All required selected papers are already analyzed and in cache.")
+
+    # Re-fetch the fully populated cache so we have everything ready for distribution
+    final_cached_papers = {p.id: p for p in db.get_cached_papers(selected_paper_ids)}
+
+    # 6. Phase 4: Distribution
+    for user_id, dist_info in user_distributions.items():
+        delivery_email = dist_info["email"]
+        selected_raw_papers = dist_info["papers"]
+        
+        # Rehydrate with AI summaries
+        hydrated_papers = [final_cached_papers[p.id] for p in selected_raw_papers if p.id in final_cached_papers]
+        
+        # Ensure they actually have summaries before sending
+        valid_ai_papers = [p for p in hydrated_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."]
+        
+        if valid_ai_papers:
+            logger.info(f"[Distribution Phase] Sending report with {len(valid_ai_papers)} papers to {delivery_email}")
+            notifier.send_report(valid_ai_papers, delivery_email)
+            db.mark_as_sent(user_id, valid_ai_papers)
+        else:
+            logger.warning(f"All {len(selected_raw_papers)} papers failed AI analysis for user {user_id}. Retrying next run.")
 
 if __name__ == "__main__":
     run_agent()
