@@ -20,11 +20,11 @@ export function TopicSidebar({ activeTopicIndex, setActiveTopicIndex, topicManag
 
   return (
     <div className="w-full lg:w-72 shrink-0 space-y-4">
-      {/* Mobile: Select active filter */}
-      <div className="lg:hidden bg-card p-4 rounded-xl border shadow-sm">
-        <Label className="mb-2 flex justify-between text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            <span>Active Filter</span>
-            <span>{fields.length}/5</span>
+      {/* Mobile: Select viewing filter */}
+      <div className="lg:hidden bg-card p-4 rounded-xl border-b shadow-sm -mx-4 sm:mx-0 sm:rounded-xl sm:border">
+        <Label className="mb-2.5 flex justify-between text-[13px] font-bold text-muted-foreground uppercase tracking-wider">
+            <span>Viewing Filter</span>
+            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[11px]">{fields.length}/5</span>
         </Label>
         <Select 
           value={activeTopicIndex >= 0 ? activeTopicIndex.toString() : ""} 
@@ -36,21 +36,29 @@ export function TopicSidebar({ activeTopicIndex, setActiveTopicIndex, topicManag
               }
           }}
         >
-          <SelectTrigger className="w-full h-12 bg-background text-foreground border-primary/20 focus:ring-primary/50">
-            <span className="truncate flex-1 text-left">
-              {activeTopicIndex >= 0 && activeTopicIndex < fields.length
-                ? (watch(`topics.${activeTopicIndex}.name`) || `Filter ${activeTopicIndex + 1}`)
-                : "Select a Filter"}
+          <SelectTrigger className="w-full h-12 bg-background font-medium text-foreground border-primary/20 focus:ring-primary/50">
+            <span className="truncate flex-1 text-left flex items-center justify-between">
+              {activeTopicIndex >= 0 && activeTopicIndex < fields.length ? (
+                <>
+                  <span className="truncate pr-2">{watch(`topics.${activeTopicIndex}.name`) || `Filter ${activeTopicIndex + 1}`}</span>
+                  {watch('delivery_topic_index') === activeTopicIndex && <Star className="w-3.5 h-3.5 shrink-0 text-primary fill-primary mr-1" />}
+                </>
+              ) : "Select a Filter"}
             </span>
           </SelectTrigger>
           <SelectContent>
             {fields.map((field, i) => (
               <SelectItem key={field.id} value={i.toString()}>
-                  {watch(`topics.${i}.name`) || `Filter ${i+1}`}
+                  <div className="flex items-center justify-between w-full">
+                    <span className="truncate pr-4">{watch(`topics.${i}.name`) || `Filter ${i+1}`}</span>
+                    {watch('delivery_topic_index') === i && (
+                       <Star className="w-3 h-3 text-primary fill-primary shrink-0" />
+                    )}
+                  </div>
               </SelectItem>
             ))}
             {fields.length < 5 && (
-              <SelectItem value="new" className="text-primary font-medium focus:text-primary">
+              <SelectItem value="new" className="text-primary font-medium focus:text-primary mt-1 border-t pt-2">
                   <div className="flex items-center">
                     <Plus className="w-4 h-4 mr-2" /> Create New Filter
                   </div>
