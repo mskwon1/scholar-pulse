@@ -32,7 +32,7 @@ def run_agent():
         if not getattr(config, 'receive_email', True):
             continue
         for topic in config.topics:
-            topic_key = f"{topic.query}|{topic.min_citations}|{topic.min_sjr_rank}"
+            topic_key = f"{','.join(topic.keywords)}|{topic.match_type}|{topic.filters.min_citations}|{topic.filters.min_journal_rank}"
             if topic_key not in unique_topics:
                 unique_topics[topic_key] = topic
 
@@ -47,7 +47,7 @@ def run_agent():
     all_raw_papers_dict = {} # Maps paper.id -> Paper object
     
     for topic_key, topic in unique_topics.items():
-        logger.info(f"[Fetch Phase] Processing unique topic: {topic.name} ({topic.query})")
+        logger.info(f"[Fetch Phase] Processing unique topic: {topic.name} ({','.join(topic.keywords)})")
         raw_papers = fetcher.fetch_papers(topic)
         
         filtered_papers = paper_filter.apply_filters(raw_papers, topic)
@@ -97,7 +97,7 @@ def run_agent():
         all_selected_papers = []
         
         for topic in config.topics:
-            topic_key = f"{topic.query}|{topic.min_citations}|{topic.min_sjr_rank}"
+            topic_key = f"{','.join(topic.keywords)}|{topic.match_type}|{topic.filters.min_citations}|{topic.filters.min_journal_rank}"
             matched_ids = topic_paper_map.get(topic_key, [])
             
             # Map IDs to actual cached paper objects
