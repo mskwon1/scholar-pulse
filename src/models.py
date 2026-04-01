@@ -11,6 +11,7 @@ class Topic(BaseModel):
     name: str
     keywords: List[str]
     match_type: str = "AND"
+    category: Optional[str] = None
     filters: FilterConfig
 
 class UserConfig(BaseModel):

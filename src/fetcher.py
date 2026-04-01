@@ -60,6 +60,10 @@ class Fetcher:
                 "year": year_filter,
                 "limit": 100 # Relevance API max limit per request
             }
+            
+        category = getattr(topic, "category", None)
+        if category and category != "All Fields":
+            params["fieldsOfStudy"] = category
         
         papers_dict = {}
         MAX_PAGES = 3  # Maximum 3 pages (up to 3000 papers for bulk, 300 for relevance)
@@ -129,12 +133,28 @@ class Fetcher:
 
     def _fetch_arxiv(self, topic: Topic) -> List[Paper]:
         """Fetches papers from arXiv API using AND/OR logic with rate limit handling."""
+        category = getattr(topic, "category", None)
+        from .utils.categories import CATEGORY_MAPPING
+        
+        arxiv_cats = CATEGORY_MAPPING.get(category, []) if category and category != "All Fields" else []
+        
+        # If a category is selected but it maps to empty for arXiv, we skip arXiv entirely.
+        if category and category != "All Fields" and not arxiv_cats:
+            logger.info(f"Skipping arXiv search for category '{category}' as there is no relevant arXiv mapping.")
+            return []
+
         if getattr(topic, "match_type", "AND").upper() == "OR":
-            query = " OR ".join([f'all:"{k}"' for k in topic.keywords])
+            query_base = " OR ".join([f'all:"{k}"' for k in topic.keywords])
         else:
             # arXiv's boolean model is very strict, so for AND we fall back to a softer approach:
             # only require the first 3 keywords to prevent queries from returning 0 results.
-            query = " AND ".join([f'all:"{k}"' for k in topic.keywords[:3]])
+            query_base = " AND ".join([f'all:"{k}"' for k in topic.keywords[:3]])
+            
+        query = f"({query_base})"
+        
+        if arxiv_cats:
+            cat_clauses = [f"cat:{c}.*" if "." not in c else f"cat:{c}" for c in arxiv_cats]
+            query += " AND (" + " OR ".join(cat_clauses) + ")"
         
         url = "http://export.arxiv.org/api/query"
         params = {
