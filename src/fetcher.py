@@ -15,7 +15,11 @@ S2_FIELDS = "paperId,title,abstract,authors,journal,publicationDate,externalIds,
 class Fetcher:
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("S2_API_KEY")
-        self.headers = {"x-api-key": self.api_key} if self.api_key else {}
+        self.headers = {
+            "User-Agent": "ScholarPulse/1.0 (mailto:mageeeeek@gmail.com)"
+        }
+        if self.api_key:
+            self.headers["x-api-key"] = self.api_key
 
     def fetch_papers(self, topic: Topic) -> List[Paper]:
         """Fetches papers for a given topic from multiple sources."""
