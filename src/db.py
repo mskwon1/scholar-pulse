@@ -52,9 +52,13 @@ class Database:
             
         try:
             paper_ids = [p.id for p in papers]
-            # Check what's already sent to THIS user
-            response = self.client.table("user_sent_papers").select("paper_id").eq("user_id", user_id).in_("paper_id", paper_ids).execute()
-            sent_ids = {item["paper_id"] for item in response.data}
+            # Check what's already sent to THIS user in chunks to avoid URL length limits
+            sent_ids = set()
+            chunk_size = 50
+            for i in range(0, len(paper_ids), chunk_size):
+                chunk = paper_ids[i:i+chunk_size]
+                response = self.client.table("user_sent_papers").select("paper_id").eq("user_id", user_id).in_("paper_id", chunk).execute()
+                sent_ids.update(item["paper_id"] for item in response.data)
             
             new_papers = [p for p in papers if p.id not in sent_ids]
             logger.info(f"User {user_id}: Checked {len(papers)} papers against DB. Found {len(new_papers)} unsent.")
@@ -91,25 +95,28 @@ class Database:
             return []
             
         try:
-            response = self.client.table("papers_cache").select("*").in_("id", paper_ids).execute()
             cached = []
-            for row in response.data:
-                cached.append(Paper(
-                    id=row.get("id"),
-                    title=row.get("title"),
-                    abstract=row.get("abstract"),
-                    authors=row.get("authors") or [],
-                    publication_date=row.get("publication_date"),
-                    citation_count=row.get("citation_count", 0),
-                    journal=row.get("journal"),
-                    sjr_rank=row.get("sjr_rank"),
-                    doi=row.get("doi"),
-                    url=row.get("url"),
-                    summary=row.get("summary"),
-                    novelty=row.get("novelty"),
-                    impact=row.get("impact"),
-                    keywords=row.get("keywords") or []
-                ))
+            chunk_size = 50
+            for i in range(0, len(paper_ids), chunk_size):
+                chunk = paper_ids[i:i+chunk_size]
+                response = self.client.table("papers_cache").select("*").in_("id", chunk).execute()
+                for row in response.data:
+                    cached.append(Paper(
+                        id=row.get("id"),
+                        title=row.get("title"),
+                        abstract=row.get("abstract"),
+                        authors=row.get("authors") or [],
+                        publication_date=row.get("publication_date"),
+                        citation_count=row.get("citation_count", 0),
+                        journal=row.get("journal"),
+                        sjr_rank=row.get("sjr_rank"),
+                        doi=row.get("doi"),
+                        url=row.get("url"),
+                        summary=row.get("summary"),
+                        novelty=row.get("novelty"),
+                        impact=row.get("impact"),
+                        keywords=row.get("keywords") or []
+                    ))
             return cached
         except Exception as e:
             logger.error(f"Error fetching cached papers: {e}")

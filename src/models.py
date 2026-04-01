@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any, Union
 from datetime import datetime
 
 class FilterConfig(BaseModel):
@@ -32,7 +32,7 @@ class Paper(BaseModel):
     sjr_rank: Optional[str] = None
     
     # Analysis results (populated later)
-    summary: Optional[str] = None
-    novelty: Optional[str] = None
-    impact: Optional[str] = None
+    summary: Optional[Any] = None
+    novelty: Optional[Any] = None
+    impact: Optional[Any] = None
     keywords: List[str] = []
