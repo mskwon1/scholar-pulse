@@ -74,9 +74,14 @@ export function TopicDetailCard({ activeTopicIndex, topicManager }: TopicDetailC
                  <Sparkles className="w-4 h-4 mr-1.5" /> Set as Active Default
                </Button>
             ) : (
-               <div className="flex items-center justify-center px-4 py-1.5 bg-primary text-primary-foreground rounded-md shadow-md border border-primary text-sm font-semibold flex-1 sm:flex-none">
+               <Button 
+                 type="button" 
+                 variant="default" 
+                 size="sm"
+                 className="flex-1 sm:flex-none font-medium cursor-default shadow-md"
+               >
                  <Sparkles className="w-4 h-4 mr-1.5 fill-current" /> Active Delivery Filter
-               </div>
+               </Button>
             )}
             <Button 
               type="button" 
