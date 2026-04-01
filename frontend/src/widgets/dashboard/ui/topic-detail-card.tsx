@@ -37,7 +37,7 @@ export function TopicDetailCard({ activeTopicIndex, topicManager }: TopicDetailC
 
   if (activeTopicIndex < 0 || activeTopicIndex >= topics.length) {
     return (
-      <Card className="flex flex-col items-center justify-center min-h-[500px] h-full p-8 bg-card border-dashed border-2 shadow-sm rounded-xl transition-all duration-300">
+      <Card className="flex flex-col items-center justify-center w-full min-h-[500px] h-full p-8 bg-card border-dashed border-2 shadow-sm rounded-xl transition-all duration-300">
           <div className="bg-muted p-5 rounded-full mb-6 ring-8 ring-background">
             <Filter className="w-12 h-12 text-muted-foreground" />
           </div>
