@@ -129,7 +129,7 @@ class Notifier:
                 </h3>
                 <div style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
                     <strong>Authors:</strong> {authors_str}<br>
-                    <strong>Journal:</strong> {p.journal or 'N/A'} <span style="background-color:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;">{p.sjr_rank or 'N/A'}</span><br>
+                    <strong>Published:</strong> {p.publication_date[:4] if p.publication_date else 'N/A'} | <strong>Journal:</strong> {p.journal or 'N/A'} <span style="background-color:#e0e7ff; color:#4338ca; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;">{p.sjr_rank or 'N/A'}</span><br>
                     <strong>Citations:</strong> {p.citation_count} | <strong>DOI:</strong> {p.doi or 'N/A'}
                 </div>
                 <hr style="border: 0; border-top: 1px solid #f1f5f9; margin: 16px 0;">
