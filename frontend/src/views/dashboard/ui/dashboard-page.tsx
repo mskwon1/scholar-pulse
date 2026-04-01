@@ -30,7 +30,7 @@ function DashboardContent({
   const topicManager = useTopicManager(activeTopicIndex, setActiveTopicIndex);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 items-start">
+    <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
       <TopicSidebar
         activeTopicIndex={activeTopicIndex}
         setActiveTopicIndex={setActiveTopicIndex}
@@ -67,10 +67,16 @@ export function DashboardView() {
     resolver: zodResolver(userConfigSchema),
     defaultValues: {
       topics: config?.topics || [],
-      delivery_topic_index: typeof config?.delivery_topic_index === 'number' ? config.delivery_topic_index : null,
+      delivery_topic_index:
+        typeof config?.delivery_topic_index === "number"
+          ? config.delivery_topic_index
+          : null,
       schedule: config?.schedule || "daily",
       delivery: config?.delivery || "email",
-      receive_email: typeof config?.receive_email === 'boolean' ? config.receive_email : true,
+      receive_email:
+        typeof config?.receive_email === "boolean"
+          ? config.receive_email
+          : true,
     } as UserConfig,
     mode: "onChange",
   });
@@ -81,10 +87,16 @@ export function DashboardView() {
     if (config) {
       reset({
         topics: config.topics || [],
-        delivery_topic_index: typeof config.delivery_topic_index === 'number' ? config.delivery_topic_index : null,
+        delivery_topic_index:
+          typeof config.delivery_topic_index === "number"
+            ? config.delivery_topic_index
+            : null,
         schedule: config.schedule || "daily",
         delivery: config.delivery || "email",
-        receive_email: typeof config.receive_email === 'boolean' ? config.receive_email : true,
+        receive_email:
+          typeof config.receive_email === "boolean"
+            ? config.receive_email
+            : true,
       });
     }
   }, [config, reset]);
