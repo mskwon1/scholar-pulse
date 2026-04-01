@@ -11,31 +11,84 @@ from .utils.logger import get_logger
 logger = get_logger(__name__)
 
 def run_agent():
-    """Main execution point for the Scholar Pulse agent."""
+    """Main execution point for the Scholar Pulse agent (Aggregator Pattern)."""
     load_dotenv()
     
-    # Initialize components
     fetcher = Fetcher()
     paper_filter = Filter()
     analyzer = Analyzer()
     db = Database()
     notifier = Notifier()
     
-    # 1. Fetch Multi-Tenant Configs from DB
+    # 1. Fetch Multi-Tenant Configs
     user_configs = db.get_all_user_configs()
     if not user_configs:
         logger.info("No active user configurations found in DB.")
         sys.exit(0)
-        
-    for user_id, config in user_configs:
-        logger.info(f"--- Processing config for user: {user_id} ---")
-        
-        # Check if user opted out of emails
-        if not getattr(config, 'receive_email', True):
-            logger.info(f"User {user_id} has email notifications disabled. Skipping.")
-            continue
 
-        # Fetch auth.users email directly
+    # 2. Phase 1: Aggregate Unique Topics
+    unique_topics = {}
+    for user_id, config in user_configs:
+        if not getattr(config, 'receive_email', True):
+            continue
+        for topic in config.topics:
+            topic_key = f"{topic.query}|{topic.min_citations}|{topic.min_sjr_rank}"
+            if topic_key not in unique_topics:
+                unique_topics[topic_key] = topic
+
+    if not unique_topics:
+        logger.info("No active topics found across all users.")
+        sys.exit(0)
+    
+    logger.info(f"Aggregator: Found {len(unique_topics)} unique topic queries to process.")
+
+    # 3. Phase 2: Fetch, Filter, and Cache
+    topic_paper_map = {} # Maps topic_key -> list of Paper IDs that passed filter
+    all_raw_papers_dict = {} # Maps paper.id -> Paper object
+    
+    for topic_key, topic in unique_topics.items():
+        logger.info(f"[Fetch Phase] Processing unique topic: {topic.name} ({topic.query})")
+        raw_papers = fetcher.fetch_papers(topic)
+        
+        filtered_papers = paper_filter.apply_filters(raw_papers, topic)
+        
+        # Store for distribution mapping
+        topic_paper_map[topic_key] = [p.id for p in filtered_papers]
+        
+        for p in filtered_papers:
+            all_raw_papers_dict[p.id] = p
+            
+    # Now check which papers need AI analysis
+    all_paper_ids = list(all_raw_papers_dict.keys())
+    
+    if not all_paper_ids:
+        logger.info("No papers passed the filters across all topics.")
+        sys.exit(0)
+
+    # Get cached papers
+    cached_papers = db.get_cached_papers(all_paper_ids)
+    cached_ids = {p.id for p in cached_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."}
+    
+    papers_to_analyze = [all_raw_papers_dict[pid] for pid in all_paper_ids if pid not in cached_ids]
+    
+    if papers_to_analyze:
+        logger.info(f"[Analysis Phase] Found {len(papers_to_analyze)} new papers needing AI summary.")
+        analyzed_papers = analyzer.analyze_papers(papers_to_analyze)
+        
+        # Save to cache
+        db.save_papers_to_cache(analyzed_papers)
+    else:
+        logger.info("[Analysis Phase] All required papers are already analyzed and in cache.")
+
+    # Re-fetch the fully populated cache so we have everything ready for distribution
+    final_cached_papers = {p.id: p for p in db.get_cached_papers(all_paper_ids)}
+
+    # 4. Phase 3: Distribution
+    for user_id, config in user_configs:
+        logger.info(f"--- Processing Distibution for user: {user_id} ---")
+        if not getattr(config, 'receive_email', True):
+            continue
+            
         delivery_email = db.get_user_email(user_id)
         if not delivery_email:
             logger.error(f"Could not determine delivery email for user {user_id}. Skipping.")
@@ -44,66 +97,43 @@ def run_agent():
         all_selected_papers = []
         
         for topic in config.topics:
-            logger.info(f"Processing topic: {topic.name}")
+            topic_key = f"{topic.query}|{topic.min_citations}|{topic.min_sjr_rank}"
+            matched_ids = topic_paper_map.get(topic_key, [])
             
-            # 2. Fetch Papers
-            raw_papers = fetcher.fetch_papers(topic)
-            if not raw_papers:
-                logger.info(f"No papers found for topic: {topic.name}")
-                continue
-                
-            # 3. Apply Multi-layered Filters (Citations, SJR, Recency)
-            filtered_papers = paper_filter.apply_filters(raw_papers, topic)
-            if not filtered_papers:
-                logger.info(f"No papers passed filters for topic: {topic.name}")
-                continue
-                
-            # 4. Check DB for duplicates
-            new_papers = db.filter_sent_papers(filtered_papers)
-            if not new_papers:
-                logger.info(f"All papers for topic: {topic.name} have already been sent.")
-                continue
-                
+            # Map IDs to actual cached paper objects
+            matched_papers = [final_cached_papers[pid] for pid in matched_ids if pid in final_cached_papers]
+            
+            # Filter what this user already received
+            new_papers = db.filter_user_sent_papers(user_id, matched_papers)
+            
             # Custom Scoring: 최신성(Recency) 기반 가중치 부여
             def get_score(p):
                 age = 0
                 if p.publication_date:
                     try:
-                        # publication_date format can be YYYY-MM-DD or YYYY
                         pub_year = int(str(p.publication_date)[:4])
                         from datetime import datetime
                         age = max(0, datetime.now().year - pub_year)
                     except Exception:
                         pass
-                
-                # 점수 공식: (인용수 + 1) / (연차 + 1)^1.5
-                # 예: 올해 출판(age=0) 논문 인용수 10 = 점수 11
-                # 예: 3년 전 출판(age=3) 논문 인용수 80 = 점수 81 / 8 = 10.125
                 return (p.citation_count + 1) / ((age + 1) ** 1.5)
 
             # Limit to top 3 papers per topic based on the recency-weighted score
-            final_papers = sorted(new_papers, key=get_score, reverse=True)[:3]
+            top_papers = sorted(new_papers, key=get_score, reverse=True)[:3]
+            all_selected_papers.extend(top_papers)
             
-            # 5. AI Analysis (Gemini)
-            analyzed_papers = analyzer.analyze_papers(final_papers)
-            
-            all_selected_papers.extend(analyzed_papers)
-            
-        # 6. Delivery (Email via Resend)
         if all_selected_papers:
-            # Filter out papers that failed AI analysis to ensure they can be retried tomorrow
+            # Ensure they actually have summaries before sending
             valid_ai_papers = [p for p in all_selected_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."]
             
             if valid_ai_papers:
-                logger.info(f"Sending report with {len(valid_ai_papers)} successfully analyzed papers to {delivery_email}")
+                logger.info(f"[Distribution Phase] Sending report with {len(valid_ai_papers)} papers to {delivery_email}")
                 notifier.send_report(valid_ai_papers, delivery_email)
-                
-                # 7. Record ONLY valid papers in DB (failed ones will be retried next run)
-                db.mark_as_sent(valid_ai_papers)
+                db.mark_as_sent(user_id, valid_ai_papers)
             else:
-                logger.warning(f"All {len(all_selected_papers)} papers failed AI analysis. Skipping email and DB record for user {user_id}.")
+                logger.warning(f"All {len(all_selected_papers)} papers failed AI analysis for user {user_id}. Retrying next run.")
         else:
-            logger.info(f"No new papers to report today for user {user_id}.")
+            logger.info(f"[Distribution Phase] No new papers to report today for user {user_id}.")
 
 if __name__ == "__main__":
     run_agent()
