@@ -72,15 +72,36 @@ class Fetcher:
         logger.info(f"Searching Semantic Scholar ({'Bulk' if match_type == 'OR' else 'Relevance'}) for: {query}")
         
         while page_count < MAX_PAGES:
-            try:
-                response = requests.get(endpoint_url, params=params, headers=self.headers, timeout=30)
-                
-                if response.status_code == 429:
-                    logger.warning(f"Semantic Scholar rate limit hit (429). URL: {response.url}")
-                    break
+            max_retries = 3
+            retry_delay = 3
+            success = False
+            data = {}
+            
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(endpoint_url, params=params, headers=self.headers, timeout=30)
                     
-                response.raise_for_status()
-                data = response.json()
+                    if response.status_code == 429:
+                        logger.warning(f"Semantic Scholar rate limit hit (429). Sleeping for {retry_delay}s... URL: {response.url}")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                        continue
+                        
+                    response.raise_for_status()
+                    data = response.json()
+                    success = True
+                    break  # Success
+                    
+                except Exception as e:
+                    error_url = response.url if 'response' in locals() and hasattr(response, 'url') else endpoint_url
+                    logger.error(f"Error fetching Semantic Scholar (Attempt {attempt + 1}/{max_retries}) for '{query}': {e} | URL: {error_url}")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+            
+            if not success:
+                logger.error(f"Failed to fetch Semantic Scholar after {max_retries} attempts. Stopping pagination.")
+                break
                 
                 items = data.get("data", [])
                 if not items:
@@ -123,11 +144,6 @@ class Fetcher:
                     
                 page_count += 1
                 time.sleep(1)  # Soft sleep between pagination calls to respect rate limit API
-                
-            except Exception as e:
-                error_url = response.url if 'response' in locals() and hasattr(response, 'url') else f"{S2_SEARCH_URL} with {params}"
-                logger.error(f"Error fetching Semantic Scholar for '{query}': {e} | URL: {error_url}")
-                break
             
         return list(papers_dict.values())
 
