@@ -107,47 +107,47 @@ class Fetcher:
                 logger.error(f"Failed to fetch Semantic Scholar after {max_retries} attempts. Stopping pagination.")
                 break
                 
-                items = data.get("data", [])
-                if not items:
-                    break
-                    
-                for item in items:
-                    pid = item.get("paperId", "")
-                    if not pid or pid in papers_dict:
-                        continue
-                        
-                    journal_info = item.get("journal", {})
-                    journal_name = journal_info.get("name") if journal_info else None
-                    doi = item.get("externalIds", {}).get("DOI")
-                    authors = [a.get("name") for a in item.get("authors", [])]
-                    
-                    paper = Paper(
-                        id=pid,
-                        title=item.get("title", ""),
-                        abstract=item.get("abstract"),
-                        authors=authors,
-                        journal=journal_name,
-                        publication_date=item.get("publicationDate"),
-                        doi=doi,
-                        url=item.get("url"),
-                        citation_count=item.get("citationCount", 0)
-                    )
-                    papers_dict[pid] = paper
+            items = data.get("data", [])
+            if not items:
+                break
                 
-                # Pagination handling depends on the endpoint
-                if match_type == "OR":
-                    token = data.get("token")
-                    if not token:
-                        break  # No more pages
-                    params["token"] = token
-                else:
-                    next_offset = data.get("next")
-                    if not next_offset:
-                        break
-                    params["offset"] = next_offset
+            for item in items:
+                pid = item.get("paperId", "")
+                if not pid or pid in papers_dict:
+                    continue
                     
-                page_count += 1
-                time.sleep(1)  # Soft sleep between pagination calls to respect rate limit API
+                journal_info = item.get("journal", {})
+                journal_name = journal_info.get("name") if journal_info else None
+                doi = item.get("externalIds", {}).get("DOI")
+                authors = [a.get("name") for a in item.get("authors", [])]
+                
+                paper = Paper(
+                    id=pid,
+                    title=item.get("title", ""),
+                    abstract=item.get("abstract"),
+                    authors=authors,
+                    journal=journal_name,
+                    publication_date=item.get("publicationDate"),
+                    doi=doi,
+                    url=item.get("url"),
+                    citation_count=item.get("citationCount", 0)
+                )
+                papers_dict[pid] = paper
+            
+            # Pagination handling depends on the endpoint
+            if match_type == "OR":
+                token = data.get("token")
+                if not token:
+                    break  # No more pages
+                params["token"] = token
+            else:
+                next_offset = data.get("next")
+                if not next_offset:
+                    break
+                params["offset"] = next_offset
+                
+            page_count += 1
+            time.sleep(1)  # Soft sleep between pagination calls to respect rate limit API
             
         return list(papers_dict.values())
 
