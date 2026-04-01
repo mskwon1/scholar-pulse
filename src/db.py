@@ -84,7 +84,10 @@ class Database:
         
         try:
             # We use upsert to avoid Unique Violation if it somehow was sent exactly concurrently
-            self.client.table("user_sent_papers").upsert(data).execute()
+            chunk_size = 100
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i+chunk_size]
+                self.client.table("user_sent_papers").upsert(chunk).execute()
             logger.info(f"User {user_id}: Recorded {len(papers)} papers as sent.")
         except Exception as e:
             logger.error(f"Error recording sent papers for user {user_id}: {e}")
@@ -149,7 +152,10 @@ class Database:
             })
             
         try:
-            self.client.table("papers_cache").upsert(data).execute()
+            chunk_size = 50
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i+chunk_size]
+                self.client.table("papers_cache").upsert(chunk).execute()
             logger.info(f"Saved/Updated {len(papers)} papers in shared cache.")
         except Exception as e:
             logger.error(f"Error saving papers to cache: {e}")
