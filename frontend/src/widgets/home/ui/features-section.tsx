@@ -1,4 +1,4 @@
-import { Search, ShieldCheck, Newspaper, Zap } from 'lucide-react';
+import { Search, ShieldCheck, Zap } from 'lucide-react';
 
 export function FeaturesSection() {
   return (
@@ -9,7 +9,7 @@ export function FeaturesSection() {
             Intelligent Research Curation
           </h2>
           <p className="max-w-[800px] text-slate-600 md:text-xl">
-            We don't just search the web. We integrate deeply with academic APIs and Gemini to give you institutional-grade literature alerts.
+            We don&apos;t just search the web. We integrate deeply with academic APIs and Gemini to give you institutional-grade literature alerts.
           </p>
         </div>
 
@@ -53,7 +53,7 @@ export function FeaturesSection() {
             <div className="z-10">
               <h2 className="text-xl font-bold text-slate-900 mb-2">Multi-Keyword Search</h2>
               <p className="text-slate-600 text-base leading-relaxed">
-                Target complex niches. Mix terms like "LLM", "RAG", and "Agents" inside a single Topic to pinpoint exact intersections.
+                Target complex niches. Mix terms like &quot;LLM&quot;, &quot;RAG&quot;, and &quot;Agents&quot; inside a single Topic to pinpoint exact intersections.
               </p>
             </div>
           </div>
