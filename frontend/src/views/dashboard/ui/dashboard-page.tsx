@@ -67,7 +67,7 @@ export function DashboardView() {
     resolver: zodResolver(userConfigSchema),
     defaultValues: {
       topics: config?.topics || [],
-      delivery_topic_index: typeof config?.delivery_topic_index === 'number' ? config.delivery_topic_index : 0,
+      delivery_topic_index: typeof config?.delivery_topic_index === 'number' ? config.delivery_topic_index : null,
       schedule: config?.schedule || "daily",
       delivery: config?.delivery || "email",
       receive_email: typeof config?.receive_email === 'boolean' ? config.receive_email : true,
@@ -81,7 +81,7 @@ export function DashboardView() {
     if (config) {
       reset({
         topics: config.topics || [],
-        delivery_topic_index: typeof config.delivery_topic_index === 'number' ? config.delivery_topic_index : 0,
+        delivery_topic_index: typeof config.delivery_topic_index === 'number' ? config.delivery_topic_index : null,
         schedule: config.schedule || "daily",
         delivery: config.delivery || "email",
         receive_email: typeof config.receive_email === 'boolean' ? config.receive_email : true,

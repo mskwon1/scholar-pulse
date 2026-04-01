@@ -14,7 +14,7 @@ export const topicSchema = z.object({
 
 export const userConfigSchema = z.object({
   topics: z.array(topicSchema).max(5, { message: "Maximum 5 filters allowed" }),
-  delivery_topic_index: z.number(),
+  delivery_topic_index: z.number().nullable().optional(),
   schedule: z.string(),
   delivery: z.string(),
   receive_email: z.boolean(),

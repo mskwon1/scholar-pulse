@@ -104,14 +104,20 @@ export function useTopicManager(
        category: 'All Fields',
        filters: { years_limit: 3, min_journal_rank: 'Q2', min_citations: 5 }
      });
+     
+     const currentDeliveryIndex = getValues('delivery_topic_index');
+     if (currentDeliveryIndex === null || currentDeliveryIndex === undefined) {
+       setValue('delivery_topic_index', fields.length, { shouldDirty: true });
+     }
+     
      setActiveTopicIndex(fields.length);
   };
 
   const confirmRemoveTopic = (index: number) => {
-      const currentDeliveryIndex = getValues('delivery_topic_index') || 0;
+      const currentDeliveryIndex = getValues('delivery_topic_index');
       if (index === currentDeliveryIndex) {
-         setValue('delivery_topic_index', 0, { shouldDirty: true });
-      } else if (index < currentDeliveryIndex) {
+         setValue('delivery_topic_index', fields.length > 1 ? (index === 0 ? 1 : 0) : null, { shouldDirty: true });
+      } else if (currentDeliveryIndex !== null && currentDeliveryIndex !== undefined && index < currentDeliveryIndex) {
          setValue('delivery_topic_index', currentDeliveryIndex - 1, { shouldDirty: true });
       }
       

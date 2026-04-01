@@ -4,7 +4,7 @@ import { useFormContext } from 'react-hook-form';
 import { Plus, Star, AlertCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Label } from '@/shared/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/shared/ui/select';
 import { UserConfig } from '@/entities/topic/model/schema';
 import { useTopicManager } from '@/features/topic-manager/model/use-topic-manager';
 
@@ -37,7 +37,11 @@ export function TopicSidebar({ activeTopicIndex, setActiveTopicIndex, topicManag
           }}
         >
           <SelectTrigger className="w-full h-12 bg-background text-foreground border-primary/20 focus:ring-primary/50">
-            <SelectValue placeholder="Select a Filter" />
+            <span className="truncate flex-1 text-left">
+              {activeTopicIndex >= 0 && activeTopicIndex < fields.length
+                ? (watch(`topics.${activeTopicIndex}.name`) || `Filter ${activeTopicIndex + 1}`)
+                : "Select a Filter"}
+            </span>
           </SelectTrigger>
           <SelectContent>
             {fields.map((field, i) => (
