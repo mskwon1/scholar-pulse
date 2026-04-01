@@ -40,29 +40,36 @@ class Fetcher:
         match_type = getattr(topic, "match_type", "AND").upper()
         year_filter = f"{datetime.now().year - topic.filters.years_limit}-{datetime.now().year}"
         
-        # Semantic Scholar's bulk search API natively supports '|' for OR and ' ' for AND matching semantics.
-        # It handles boolean combinations much more reliably than standard relevance search.
         if match_type == "OR":
             query = " | ".join([f'"{k}"' for k in topic.keywords])
+            endpoint_url = "https://api.semanticscholar.org/graph/v1/paper/search/bulk"
+            params = {
+                "query": query,
+                "fields": S2_FIELDS,
+                "year": year_filter,
+                "sort": "citationCount:desc"
+            }
         else:
-            query = " ".join([f'"{k}"' for k in topic.keywords])
-            
-        params = {
-            "query": query,
-            "fields": S2_FIELDS,
-            "year": year_filter,
-            "sort": "citationCount:desc"
-        }
+            # AND match: Users usually mean "Papers that are most relevant to all these concepts combined"
+            # We use an unquoted natural string and the Relevance Search API endpoint.
+            query = " ".join([k for k in topic.keywords])
+            endpoint_url = "https://api.semanticscholar.org/graph/v1/paper/search"
+            params = {
+                "query": query,
+                "fields": S2_FIELDS,
+                "year": year_filter,
+                "limit": 100 # Relevance API max limit per request
+            }
         
         papers_dict = {}
-        MAX_PAGES = 3  # Maximum 3 pages (up to 3000 papers) to prevent memory/timeout issues
+        MAX_PAGES = 3  # Maximum 3 pages (up to 3000 papers for bulk, 300 for relevance)
         page_count = 0
         
-        logger.info(f"Searching Semantic Scholar (Bulk) for: {query}")
+        logger.info(f"Searching Semantic Scholar ({'Bulk' if match_type == 'OR' else 'Relevance'}) for: {query}")
         
         while page_count < MAX_PAGES:
             try:
-                response = requests.get(S2_SEARCH_URL, params=params, headers=self.headers, timeout=30)
+                response = requests.get(endpoint_url, params=params, headers=self.headers, timeout=30)
                 
                 if response.status_code == 429:
                     logger.warning(f"Semantic Scholar rate limit hit (429). URL: {response.url}")
@@ -98,12 +105,18 @@ class Fetcher:
                     )
                     papers_dict[pid] = paper
                 
-                token = data.get("token")
-                if not token:
-                    break  # No more pages
+                # Pagination handling depends on the endpoint
+                if match_type == "OR":
+                    token = data.get("token")
+                    if not token:
+                        break  # No more pages
+                    params["token"] = token
+                else:
+                    next_offset = data.get("next")
+                    if not next_offset:
+                        break
+                    params["offset"] = next_offset
                     
-                # Update params for the next page
-                params["token"] = token
                 page_count += 1
                 time.sleep(1)  # Soft sleep between pagination calls to respect rate limit API
                 
@@ -116,8 +129,12 @@ class Fetcher:
 
     def _fetch_arxiv(self, topic: Topic) -> List[Paper]:
         """Fetches papers from arXiv API using AND/OR logic with rate limit handling."""
-        match_op = " OR " if getattr(topic, "match_type", "AND").upper() == "OR" else " AND "
-        query = match_op.join([f'all:"{k}"' for k in topic.keywords])
+        if getattr(topic, "match_type", "AND").upper() == "OR":
+            query = " OR ".join([f'all:"{k}"' for k in topic.keywords])
+        else:
+            # arXiv's boolean model is very strict, so for AND we fall back to a softer approach:
+            # only require the first 3 keywords to prevent queries from returning 0 results.
+            query = " AND ".join([f'all:"{k}"' for k in topic.keywords[:3]])
         
         url = "http://export.arxiv.org/api/query"
         params = {
