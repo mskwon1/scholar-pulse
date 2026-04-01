@@ -50,9 +50,9 @@ export function HowItWorksSection() {
               <BrainCircuit className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <div className="space-y-3">
-              <h3 className="font-bold text-xl text-foreground">3. Gemini AI Analysis</h3>
+              <h3 className="font-bold text-xl text-foreground">3. AI Analysis</h3>
               <p className="text-muted-foreground leading-relaxed text-sm">
-                We pull new papers natively, apply SJR rank filters, and generate <strong className="text-foreground">3-line summaries</strong> using Gemini 1.5.
+                We pull new papers natively, apply SJR rank filters, and generate <strong className="text-foreground">3-line summaries</strong> using state-of-the-art AI.
               </p>
             </div>
           </div>

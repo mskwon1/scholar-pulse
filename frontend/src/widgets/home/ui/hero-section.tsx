@@ -26,7 +26,7 @@ export function HeroSection() {
           
           <div className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-medium text-indigo-800 shadow-sm mb-6">
             <Sparkles className="mr-2 h-4 w-4 text-indigo-600" />
-            <span>Powered by Gemini 1.5 Flash</span>
+            <span>Powered by State-of-the-Art AI</span>
           </div>
 
           <div className="space-y-6 max-w-4xl">
@@ -37,7 +37,7 @@ export function HeroSection() {
               </span>
             </h1>
             <p className="mx-auto max-w-[750px] text-muted-foreground md:text-xl lg:text-2xl leading-relaxed tracking-tight">
-              Create up to 5 customized topic feeds. We scan ArXiv and Semantic Scholar, filtering by impact, and deliver 3-line Gemini summaries straight to your inbox.
+              Create up to 5 customized topic feeds. We scan ArXiv and Semantic Scholar, filtering by impact, and deliver 3-line AI summaries straight to your inbox.
             </p>
           </div>
 

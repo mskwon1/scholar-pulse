@@ -9,7 +9,7 @@ export function FeaturesSection() {
             Intelligent Research Curation
           </h2>
           <p className="max-w-[800px] text-slate-600 md:text-xl">
-            We don&apos;t just search the web. We integrate deeply with academic APIs and Gemini to give you institutional-grade literature alerts.
+            We don&apos;t just search the web. We integrate deeply with academic APIs and AI models to give you institutional-grade literature alerts.
           </p>
         </div>
 
