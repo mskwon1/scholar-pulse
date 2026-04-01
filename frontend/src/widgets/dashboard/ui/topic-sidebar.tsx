@@ -21,7 +21,7 @@ export function TopicSidebar({ activeTopicIndex, setActiveTopicIndex, topicManag
   return (
     <div className="w-full lg:w-72 shrink-0 space-y-4">
       {/* Mobile: Select viewing filter */}
-      <div className="lg:hidden bg-card p-4 rounded-xl border-b shadow-sm -mx-4 sm:mx-0 sm:rounded-xl sm:border">
+      <div className="lg:hidden bg-card p-4 rounded-xl border shadow-sm">
         <Label className="mb-2.5 flex justify-between text-[13px] font-bold text-muted-foreground uppercase tracking-wider">
             <span>Viewing Filter</span>
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[11px]">{fields.length}/5</span>
