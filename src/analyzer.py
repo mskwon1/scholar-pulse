@@ -71,9 +71,24 @@ class Analyzer:
                         'response_mime_type': 'application/json'
                     }
                 )
-                
                 if response.text:
-                    results = json.loads(response.text)
+                    text = response.text.strip()
+                    
+                    # Resilient parsing: extract the JSON array chunk
+                    start_idx = text.find('[')
+                    end_idx = text.rfind(']')
+                    
+                    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                        json_str = text[start_idx:end_idx + 1]
+                    else:
+                        json_str = text
+                        
+                    try:
+                        results = json.loads(json_str)
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON parsing failed. Raw response snippet: {text[:500]}...")
+                        raise e
+                        
                     if isinstance(results, list):
                         # Map results back to papers using the provided 'id'
                         result_map = {res.get("id"): res for res in results if res.get("id")}
