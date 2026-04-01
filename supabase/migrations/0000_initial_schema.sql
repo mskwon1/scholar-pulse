@@ -23,14 +23,17 @@ CREATE TABLE IF NOT EXISTS public.user_config (
 ALTER TABLE public.user_config ENABLE ROW LEVEL SECURITY;
 
 -- Frontend RLS Policies for user_config (Protecting user data)
+DROP POLICY IF EXISTS "Users can view their own config" ON public.user_config;
 CREATE POLICY "Users can view their own config"
 ON public.user_config FOR SELECT
 USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own config" ON public.user_config;
 CREATE POLICY "Users can insert their own config"
 ON public.user_config FOR INSERT
 WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own config" ON public.user_config;
 CREATE POLICY "Users can update their own config"
 ON public.user_config FOR UPDATE
 USING (auth.uid() = user_id);
@@ -44,6 +47,7 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_user_config_updated_at ON public.user_config;
 CREATE TRIGGER update_user_config_updated_at
 BEFORE UPDATE ON public.user_config
 FOR EACH ROW
