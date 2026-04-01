@@ -21,6 +21,7 @@ export function useConfigQuery(user: User | null) {
       // Default config
       return {
         topics: [],
+        delivery_topic_index: 0,
         schedule: 'daily',
         delivery: 'email',
         receive_email: true,

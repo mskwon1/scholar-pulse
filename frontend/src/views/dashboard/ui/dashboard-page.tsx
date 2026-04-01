@@ -1,36 +1,45 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAtom } from 'jotai';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, FormProvider } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAtom } from "jotai";
 
-import { userAtom, authLoadingAtom } from '@/entities/user/model/store';
-import { UserConfig, userConfigSchema } from '@/entities/topic/model/schema';
-import { useConfigQuery, useSaveConfigMutation } from '@/features/topic-manager/api/use-topic-api';
+import { userAtom, authLoadingAtom } from "@/entities/user/model/store";
+import { UserConfig, userConfigSchema } from "@/entities/topic/model/schema";
+import {
+  useConfigQuery,
+  useSaveConfigMutation,
+} from "@/features/topic-manager/api/use-topic-api";
 
-import { DashboardHeader } from '@/widgets/dashboard/ui/dashboard-header';
-import { DeliverySettingsCard } from '@/widgets/dashboard/ui/delivery-settings-card';
-import { TopicSidebar } from '@/widgets/dashboard/ui/topic-sidebar';
-import { TopicDetailCard } from '@/widgets/dashboard/ui/topic-detail-card';
-import { DashboardFooter } from '@/widgets/dashboard/ui/dashboard-footer';
-import { useTopicManager } from '@/features/topic-manager/model/use-topic-manager';
+import { DashboardHeader } from "@/widgets/dashboard/ui/dashboard-header";
+import { DeliverySettingsCard } from "@/widgets/dashboard/ui/delivery-settings-card";
+import { TopicSidebar } from "@/widgets/dashboard/ui/topic-sidebar";
+import { TopicDetailCard } from "@/widgets/dashboard/ui/topic-detail-card";
+import { DashboardFooter } from "@/widgets/dashboard/ui/dashboard-footer";
+import { useTopicManager } from "@/features/topic-manager/model/use-topic-manager";
 
-function DashboardContent({ activeTopicIndex, setActiveTopicIndex }: { activeTopicIndex: number, setActiveTopicIndex: (i: number) => void }) {
+function DashboardContent({
+  activeTopicIndex,
+  setActiveTopicIndex,
+}: {
+  activeTopicIndex: number;
+  setActiveTopicIndex: (i: number) => void;
+}) {
   const topicManager = useTopicManager(activeTopicIndex, setActiveTopicIndex);
-  
+
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
-      <TopicSidebar 
-        activeTopicIndex={activeTopicIndex} 
-        setActiveTopicIndex={setActiveTopicIndex} 
+      <TopicSidebar
+        activeTopicIndex={activeTopicIndex}
+        setActiveTopicIndex={setActiveTopicIndex}
         topicManager={topicManager}
       />
       <div className="flex-1 w-full shrink min-w-0">
-        <TopicDetailCard 
-          activeTopicIndex={activeTopicIndex} 
-          setActiveTopicIndex={setActiveTopicIndex} 
+        <TopicDetailCard
+          activeTopicIndex={activeTopicIndex}
+          setActiveTopicIndex={setActiveTopicIndex}
           topicManager={topicManager}
         />
       </div>
@@ -47,7 +56,7 @@ export function DashboardView() {
   // Auth redirect effect
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, authLoading, router]);
 
@@ -56,21 +65,27 @@ export function DashboardView() {
 
   const methods = useForm<UserConfig>({
     resolver: zodResolver(userConfigSchema),
-    defaultValues: (config ? { delivery_topic_index: 0, ...config } : {
-      topics: [],
-      delivery_topic_index: 0,
-      schedule: 'daily',
-      delivery: 'email',
-      receive_email: true,
-    }) as UserConfig,
-    mode: 'onChange',
+    defaultValues: {
+      topics: config?.topics || [],
+      delivery_topic_index: typeof config?.delivery_topic_index === 'number' ? config.delivery_topic_index : 0,
+      schedule: config?.schedule || "daily",
+      delivery: config?.delivery || "email",
+      receive_email: typeof config?.receive_email === 'boolean' ? config.receive_email : true,
+    } as UserConfig,
+    mode: "onChange",
   });
 
   const { reset } = methods;
 
   useEffect(() => {
     if (config) {
-      reset(config);
+      reset({
+        topics: config.topics || [],
+        delivery_topic_index: typeof config.delivery_topic_index === 'number' ? config.delivery_topic_index : 0,
+        schedule: config.schedule || "daily",
+        delivery: config.delivery || "email",
+        receive_email: typeof config.receive_email === 'boolean' ? config.receive_email : true,
+      });
     }
   }, [config, reset]);
 
@@ -79,7 +94,9 @@ export function DashboardView() {
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="animate-pulse flex flex-col items-center">
           <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-muted-foreground font-medium">Loading your dashboard...</p>
+          <p className="text-muted-foreground font-medium">
+            Loading your dashboard...
+          </p>
         </div>
       </div>
     );
@@ -103,16 +120,16 @@ export function DashboardView() {
             <DeliverySettingsCard />
 
             <div className="flex flex-col lg:flex-row gap-8 items-start">
-              <DashboardContent 
+              <DashboardContent
                 activeTopicIndex={activeTopicIndex}
                 setActiveTopicIndex={setActiveTopicIndex}
               />
             </div>
           </main>
 
-          <DashboardFooter 
-            isSaving={saveMutation.isPending} 
-            onSubmit={onSubmit} 
+          <DashboardFooter
+            isSaving={saveMutation.isPending}
+            onSubmit={onSubmit}
           />
         </form>
       </FormProvider>
