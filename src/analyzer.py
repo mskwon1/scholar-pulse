@@ -45,7 +45,7 @@ class Analyzer:
             return papers
             
         analyzed_papers = []
-        batch_size = 50  # Analyze 50 papers per single Gemini API call
+        batch_size = 10  # Reduced from 50 to 10 to prevent JSON truncation (max output tokens)
         
         for i in range(0, len(papers), batch_size):
             batch = papers[i:i + batch_size]

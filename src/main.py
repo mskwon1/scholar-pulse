@@ -134,8 +134,12 @@ def run_agent():
         logger.info(f"[Analysis Phase] Found {len(papers_to_analyze)} selected papers needing AI summary.")
         analyzed_papers = analyzer.analyze_papers(papers_to_analyze)
         
-        # Save to cache
-        db.save_papers_to_cache(analyzed_papers)
+        # Save to cache ONLY if the paper acquired a summary, preventing empty rows
+        successfully_analyzed = [p for p in analyzed_papers if p.summary and str(p.summary).strip().lower() != "analysis pending..."]
+        if successfully_analyzed:
+            db.save_papers_to_cache(successfully_analyzed)
+        if len(successfully_analyzed) < len(papers_to_analyze):
+            logger.warning(f"[Analysis Phase] {len(papers_to_analyze) - len(successfully_analyzed)} papers failed AI analysis and were not cached.")
     else:
         logger.info("[Analysis Phase] All required selected papers are already analyzed and in cache.")
 
