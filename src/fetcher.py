@@ -27,16 +27,20 @@ class Fetcher:
         
         # 1. Fetch from Semantic Scholar
         s2_papers = self._fetch_s2(topic)
+        logger.info(f"Fetched {len(s2_papers)} papers from Semantic Scholar.")
         all_papers.extend(s2_papers)
         
         # 2. Fetch from arXiv (as secondary source or fallback)
         arxiv_papers = self._fetch_arxiv(topic)
+        logger.info(f"Fetched {len(arxiv_papers)} papers from arXiv.")
+        
         # Deduplicate papers (prefer S2 if available)
         s2_titles = {p.title.lower() for p in s2_papers}
         for p in arxiv_papers:
             if p.title.lower() not in s2_titles:
                 all_papers.append(p)
                 
+        logger.info(f"Total fetched for topic '{topic.name}' after deduplication: {len(all_papers)} papers.")
         return all_papers
 
     def _fetch_s2(self, topic: Topic) -> List[Paper]:
