@@ -121,13 +121,18 @@ class Fetcher:
                 doi = item.get("externalIds", {}).get("DOI")
                 authors = [a.get("name") for a in item.get("authors", [])]
                 
+                # Fallback: Use 'year' if 'publicationDate' is missing
+                pub_date = item.get("publicationDate")
+                if not pub_date and item.get("year"):
+                    pub_date = str(item.get("year"))
+                
                 paper = Paper(
                     id=pid,
                     title=item.get("title", ""),
                     abstract=item.get("abstract"),
                     authors=authors,
                     journal=journal_name,
-                    publication_date=item.get("publicationDate"),
+                    publication_date=pub_date,
                     doi=doi,
                     url=item.get("url"),
                     citation_count=item.get("citationCount", 0)
